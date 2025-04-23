@@ -1,31 +1,42 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import ReactFlow, {
   Background,
   Controls,
   MiniMap,
-  useReactFlow,
-  Panel,
+  ReactFlowProvider,
+  Panel
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useFlowStore } from '../../store/flowStore';
-import { nodeTypes } from './NodeTypes';
-import { Plus, Minus, Maximize, Grid } from 'lucide-react';
+
+// Node types
+import DefaultNode from './Nodes/DefaultNode';
+
+// Define custom node types
+const nodeTypes = {
+  default: DefaultNode,
+  trigger: DefaultNode,
+  action: DefaultNode,
+  logic: DefaultNode,
+  ai: DefaultNode,
+  app: DefaultNode,
+  data: DefaultNode,
+};
 
 const FlowCanvas = () => {
-  const reactFlowWrapper = useRef(null);
-  const {
+  const { 
     nodes,
     edges,
     onNodesChange,
     onEdgesChange,
     onConnect,
     onNodeClick,
-    addNode,
-    setSelectedNode,
+    addNode
   } = useFlowStore();
-  const { fitView, zoomIn, zoomOut } = useReactFlow();
+  
+  const reactFlowWrapper = useRef(null);
+  const [reactFlowInstance, setReactFlowInstance] = useState(null);
 
-  // Handle node drag when dropped from the sidebar
   const onDragOver = useCallback((event) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
@@ -37,84 +48,74 @@ const FlowCanvas = () => {
 
       const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
       const type = event.dataTransfer.getData('application/reactflow');
-      const category = event.dataTransfer.getData('nodeCategory');
+      const category = event.dataTransfer.getData('category');
       
       // Check if the dropped element is valid
       if (typeof type === 'undefined' || !type) {
         return;
       }
 
-      const position = {
+      // Get position from drop coordinates
+      const position = reactFlowInstance.project({
         x: event.clientX - reactFlowBounds.left,
         y: event.clientY - reactFlowBounds.top,
-      };
-
+      });
+      
       addNode(type, category, position);
     },
-    [addNode]
+    [reactFlowInstance, addNode]
   );
 
-  const handleNodeClick = (event, node) => {
-    setSelectedNode(node);
-    onNodeClick(event, node);
-  };
-
   return (
-    <div className="h-full w-full" ref={reactFlowWrapper}>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onNodeClick={handleNodeClick}
-        onDragOver={onDragOver}
-        onDrop={onDrop}
-        nodeTypes={nodeTypes}
-        fitView
-        attributionPosition="bottom-right"
-      >
-        <Controls />
-        <MiniMap
-          nodeStrokeColor={(n) => {
-            return n.style?.stroke || '#ddd';
-          }}
-          nodeBorderRadius={2}
-        />
-        <Background 
-          variant="dots" 
-          gap={12} 
-          size={1} 
-          color="#a9b8c9" 
-          style={{ backgroundColor: 'transparent' }}
-        />
-        <Panel position="top-right" className="bg-white dark:bg-slate-800 p-2 rounded-md shadow-md space-y-2">
-          <button
-            className="flex items-center justify-center w-8 h-8 rounded hover:bg-slate-100 dark:hover:bg-slate-700"
-            onClick={() => zoomIn({ duration: 300 })}
-          >
-            <Plus size={18} />
-          </button>
-          <button
-            className="flex items-center justify-center w-8 h-8 rounded hover:bg-slate-100 dark:hover:bg-slate-700"
-            onClick={() => zoomOut({ duration: 300 })}
-          >
-            <Minus size={18} />
-          </button>
-          <button
-            className="flex items-center justify-center w-8 h-8 rounded hover:bg-slate-100 dark:hover:bg-slate-700"
-            onClick={() => fitView({ duration: 300 })}
-          >
-            <Maximize size={18} />
-          </button>
-          <button
-            className="flex items-center justify-center w-8 h-8 rounded hover:bg-slate-100 dark:hover:bg-slate-700"
-          >
-            <Grid size={18} />
-          </button>
-        </Panel>
-      </ReactFlow>
-    </div>
+    <ReactFlowProvider>
+      <div className="h-full w-full" ref={reactFlowWrapper}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onNodeClick={onNodeClick}
+          onInit={setReactFlowInstance}
+          onDrop={onDrop}
+          onDragOver={onDragOver}
+          nodeTypes={nodeTypes}
+          fitView
+          snapToGrid
+          snapGrid={[15, 15]}
+          minZoom={0.1}
+          maxZoom={4}
+          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+          connectionLineStyle={{ stroke: '#60a5fa', strokeWidth: 2 }}
+          connectionLineType="smoothstep"
+        >
+          <Background color="#aaa" gap={16} />
+          <Controls />
+          <MiniMap 
+            nodeStrokeColor={(n) => {
+              if (n.type === 'trigger') return '#ff0072';
+              if (n.type === 'action') return '#1a192b';
+              if (n.type === 'logic') return '#ff9900';
+              if (n.type === 'ai') return '#7b2cbf';
+              return '#eee';
+            }}
+            nodeColor={(n) => {
+              if (n.type === 'trigger') return '#ffb3d1';
+              if (n.type === 'action') return '#c5d5f0';
+              if (n.type === 'logic') return '#ffe0b2';
+              if (n.type === 'ai') return '#d8c2f3';
+              return '#fff';
+            }}
+            maskColor="#f8fafc50"
+          />
+          <Panel position="top-left" className="bg-white dark:bg-slate-800 p-2 rounded shadow">
+            <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+              Drag nodes from the sidebar to the canvas
+            </h3>
+          </Panel>
+        </ReactFlow>
+      </div>
+    </ReactFlowProvider>
   );
 };
 
