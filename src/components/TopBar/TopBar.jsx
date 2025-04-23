@@ -1,107 +1,156 @@
 import React, { useState } from 'react';
-import {
-  Play,
-  Save,
-  Share,
-  Settings,
-  ChevronDown,
-  Key,
-  MoreHorizontal,
-  Copy,
-  Trash,
-  Download,
-  Upload,
-  AlertCircle
+import { 
+  Play, 
+  Pause, 
+  Save, 
+  Share2, 
+  Settings, 
+  Undo, 
+  Redo,
+  HelpCircle,
+  Key as KeyIcon
 } from 'lucide-react';
 import { useFlowStore } from '../../store/flowStore';
 
 const TopBar = () => {
   const [workflowName, setWorkflowName] = useState('My Workflow');
-  const [showDropdown, setShowDropdown] = useState(false);
-  const selectedNode = useFlowStore(state => state.selectedNode);
+  const [isRunning, setIsRunning] = useState(false);
   
-  const toggleDropdown = () => {
-    setShowDropdown(!showDropdown);
+  const nodes = useFlowStore((state) => state.nodes);
+  
+  const handleRun = () => {
+    setIsRunning(!isRunning);
+    // Logic for running/pausing the workflow
+    console.log(`Workflow ${isRunning ? 'paused' : 'running'}`);
   };
   
-  const handleNameChange = (e) => {
-    setWorkflowName(e.target.value);
+  const handleSave = () => {
+    // Logic for saving the workflow
+    console.log('Workflow saved');
+    
+    // Example of what might be saved
+    const workflowData = {
+      name: workflowName,
+      nodes: nodes,
+      // Other workflow data
+    };
+    
+    console.log('Workflow data:', workflowData);
   };
-
+  
+  const handleShare = () => {
+    // Logic for sharing the workflow
+    console.log('Share workflow');
+  };
+  
+  const handleSettings = () => {
+    // Logic for opening settings
+    console.log('Open settings');
+  };
+  
+  const handleUndo = () => {
+    // Logic for undo
+    console.log('Undo');
+  };
+  
+  const handleRedo = () => {
+    // Logic for redo
+    console.log('Redo');
+  };
+  
+  const handleCredentials = () => {
+    // Logic for managing credentials
+    console.log('Manage credentials');
+  };
+  
   return (
-    <div className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4">
-      {/* Left section */}
-      <div className="flex items-center gap-3">
+    <div className="bg-white border-b border-gray-200 px-4 h-14 flex items-center justify-between shadow-sm">
+      {/* Left section: Title and controls */}
+      <div className="flex items-center space-x-4">
         <div className="flex items-center">
           <input
             type="text"
             value={workflowName}
-            onChange={handleNameChange}
-            className="text-lg font-medium border-none focus:outline-none focus:ring-1 focus:ring-blue-500 px-2 py-1 rounded"
+            onChange={(e) => setWorkflowName(e.target.value)}
+            className="border-0 font-medium text-lg px-2 py-1 focus:ring-2 focus:ring-blue-500 rounded"
           />
-          <ChevronDown 
-            className="w-5 h-5 text-gray-500 cursor-pointer"
-            onClick={toggleDropdown}
-          />
-          
-          {showDropdown && (
-            <div className="absolute top-12 left-4 bg-white shadow-lg rounded-md border border-gray-200 z-10">
-              <ul className="py-1">
-                <li className="px-4 py-2 hover:bg-gray-100 flex items-center gap-2 cursor-pointer">
-                  <Copy size={16} /> Duplicate
-                </li>
-                <li className="px-4 py-2 hover:bg-gray-100 flex items-center gap-2 cursor-pointer">
-                  <Trash size={16} /> Delete
-                </li>
-                <li className="px-4 py-2 hover:bg-gray-100 flex items-center gap-2 cursor-pointer">
-                  <Download size={16} /> Export
-                </li>
-                <li className="px-4 py-2 hover:bg-gray-100 flex items-center gap-2 cursor-pointer">
-                  <Upload size={16} /> Import
-                </li>
-              </ul>
-            </div>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <button 
+            onClick={handleUndo}
+            className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+            title="Undo"
+          >
+            <Undo size={18} />
+          </button>
+          <button 
+            onClick={handleRedo}
+            className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+            title="Redo"
+          >
+            <Redo size={18} />
+          </button>
+        </div>
+      </div>
+      
+      {/* Center section: Run controls */}
+      <div className="flex items-center space-x-2">
+        <button
+          onClick={handleRun}
+          className={`flex items-center space-x-1 px-3 py-1 rounded-md text-white ${
+            isRunning ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-500 hover:bg-green-600'
+          } transition-colors`}
+        >
+          {isRunning ? (
+            <>
+              <Pause size={16} />
+              <span>Pause</span>
+            </>
+          ) : (
+            <>
+              <Play size={16} />
+              <span>Run</span>
+            </>
           )}
-        </div>
-        
-        <div className="h-6 w-px bg-gray-300"></div>
-        
-        <div className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded text-sm text-gray-600">
-          <AlertCircle size={14} />
-          <span>Draft</span>
-        </div>
+        </button>
       </div>
       
-      {/* Middle section with current node */}
-      <div className="flex-grow flex justify-center">
-        {selectedNode && (
-          <div className="text-sm text-gray-500">
-            Selected: {selectedNode.data.label}
-          </div>
-        )}
-      </div>
-      
-      {/* Right section */}
-      <div className="flex items-center gap-2">
-        <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-2 rounded-md">
-          <Key size={18} />
+      {/* Right section: Actions */}
+      <div className="flex items-center space-x-2">
+        <button
+          onClick={handleCredentials}
+          className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+          title="Credentials"
+        >
+          <KeyIcon size={18} />
         </button>
-        
-        <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-2 rounded-md">
-          <Settings size={18} />
-        </button>
-        
-        <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-2 rounded-md">
-          <Share size={18} />
-        </button>
-        
-        <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-2 rounded-md">
+        <button
+          onClick={handleSave}
+          className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+          title="Save"
+        >
           <Save size={18} />
         </button>
-        
-        <button className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-md flex items-center gap-1">
-          <Play size={16} />
-          <span>Run</span>
+        <button
+          onClick={handleShare}
+          className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+          title="Share"
+        >
+          <Share2 size={18} />
+        </button>
+        <button
+          onClick={handleSettings}
+          className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+          title="Settings"
+        >
+          <Settings size={18} />
+        </button>
+        <button
+          className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+          title="Help"
+        >
+          <HelpCircle size={18} />
         </button>
       </div>
     </div>

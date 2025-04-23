@@ -1,56 +1,89 @@
 import React from 'react';
 import { Handle, Position } from 'reactflow';
 import { useFlowStore } from '../../../store/flowStore';
-import { nodeDefinitions } from '../../../data/nodeData';
 
 const DefaultNode = ({ id, data }) => {
-  const { nodeType, label } = data;
+  const { type, label, category, properties } = data;
+  const setSelectedNode = useFlowStore((state) => state.setSelectedNode);
   
-  // Find the node definition to get icon and category
-  const nodeDef = nodeDefinitions.find(node => node.type === nodeType);
-  
-  // Get the corresponding colors based on category
+  // Node color based on category
   const getCategoryColor = (category) => {
-    switch (category) {
-      case 'trigger':
-        return 'bg-yellow-100 border-yellow-400';
-      case 'app':
-        return 'bg-blue-100 border-blue-400';
-      case 'logic':
-        return 'bg-purple-100 border-purple-400';
-      case 'data':
-        return 'bg-green-100 border-green-400';
-      case 'ai':
-        return 'bg-red-100 border-red-400';
-      default:
-        return 'bg-gray-100 border-gray-400';
-    }
+    const colors = {
+      trigger: '#ff9900',
+      app: '#00a8ff',
+      logic: '#7352ff',
+      data: '#00c853',
+      ai: '#ff5252',
+    };
+    return colors[category] || '#888';
   };
   
-  const nodeColor = nodeDef ? getCategoryColor(nodeDef.category) : 'bg-gray-100 border-gray-400';
-  const IconComponent = nodeDef?.icon;
+  const getBgColor = (category) => {
+    const colors = {
+      trigger: 'bg-orange-50',
+      app: 'bg-blue-50',
+      logic: 'bg-purple-50',
+      data: 'bg-green-50',
+      ai: 'bg-red-50',
+    };
+    return colors[category] || 'bg-gray-50';
+  };
   
+  const color = getCategoryColor(category);
+  const bgColorClass = getBgColor(category);
+  
+  const handleNodeClick = () => {
+    setSelectedNode({ id, data });
+  };
+
   return (
-    <div className={`rounded-lg border-2 ${nodeColor} p-3 min-w-[150px] shadow-md`}>
+    <div 
+      className={`rounded-lg border-2 shadow-sm ${bgColorClass} w-60`}
+      style={{ borderColor: color }}
+      onClick={handleNodeClick}
+    >
+      {/* Input handle */}
       <Handle
         type="target"
-        position={Position.Top}
-        className="w-3 h-3 bg-blue-500"
+        position={Position.Left}
+        style={{ background: color, width: 8, height: 8 }}
       />
       
-      <div className="flex items-center space-x-2 mb-2">
-        {IconComponent && <div className="text-gray-700"><IconComponent /></div>}
-        <div className="font-medium text-gray-800">{label}</div>
+      {/* Node header */}
+      <div 
+        className="px-3 py-2 rounded-t-md font-medium flex items-center"
+        style={{ background: color, color: '#fff' }}
+      >
+        {data.icon && <span className="mr-2">{data.icon()}</span>}
+        <div>{label}</div>
       </div>
       
-      {nodeDef && (
-        <div className="text-xs text-gray-600">{nodeDef.description}</div>
-      )}
+      {/* Node content */}
+      <div className="p-3">
+        <div className="text-xs text-gray-500">{data.description}</div>
+        
+        {/* Show a few key properties if available */}
+        {properties && Object.keys(properties).length > 0 && (
+          <div className="mt-2 text-xs space-y-1">
+            {Object.entries(properties).slice(0, 3).map(([key, value]) => (
+              <div key={key} className="flex justify-between">
+                <span className="font-medium">{key}:</span>
+                <span className="truncate max-w-[120px]">
+                  {typeof value === 'object' 
+                    ? JSON.stringify(value).substring(0, 15) + '...' 
+                    : String(value).substring(0, 15)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
       
+      {/* Output handle */}
       <Handle
         type="source"
-        position={Position.Bottom}
-        className="w-3 h-3 bg-blue-500"
+        position={Position.Right}
+        style={{ background: color, width: 8, height: 8 }}
       />
     </div>
   );

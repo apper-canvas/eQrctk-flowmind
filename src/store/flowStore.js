@@ -1,151 +1,174 @@
 import { create } from 'zustand';
 import { nanoid } from 'nanoid';
+import { addEdge, applyNodeChanges, applyEdgeChanges } from 'reactflow';
 
-export const useFlowStore = create((set, get) => ({
+// Initial flow state
+const initialState = {
   nodes: [],
   edges: [],
   selectedNode: null,
-  nodeCount: {},
-  tabIndex: 0,
-  tabs: [{ id: '1', name: 'Flow 1' }],
+};
 
-  // Add node to the canvas
-  addNode: (nodeType, position, data = {}) => {
-    const { nodeCount } = get();
-    
-    // Track count of each node type to create unique IDs
-    const count = (nodeCount[nodeType] || 0) + 1;
-    
+// Create the store
+export const useFlowStore = create((set, get) => ({
+  // State
+  ...initialState,
+
+  // Node Operations
+  addNode: (node) => {
     const newNode = {
-      id: `${nodeType}-${count}`,
-      type: 'default',
-      position,
-      data: {
-        ...data,
-        nodeType,
-        label: `${data.label || nodeType} ${count}`
-      }
-    };
-    
-    set(state => ({
-      nodes: [...state.nodes, newNode],
-      nodeCount: {
-        ...state.nodeCount,
-        [nodeType]: count
-      }
-    }));
-    
-    return newNode;
-  },
-
-  // Connect two nodes with an edge
-  addEdge: (params) => {
-    const edge = {
       id: nanoid(),
-      ...params
+      data: { 
+        label: node.label,
+        type: node.type,
+        category: node.category,
+        description: node.description,
+        // Default properties for the node type
+        properties: {
+          // Common properties
+          name: `${node.label}_${nanoid(4)}`,
+          description: '',
+          // Type-specific default properties will be added based on node type
+          ...getDefaultPropertiesForType(node.type),
+        }
+      },
+      position: node.position,
+      type: 'default', // or custom node type
+      style: {
+        borderColor: getCategoryColor(node.category),
+      }
     };
     
-    set(state => ({
-      edges: [...state.edges, edge]
+    set((state) => ({
+      nodes: [...state.nodes, newNode],
+      selectedNode: newNode
+    }));
+    return newNode.id;
+  },
+
+  onNodesChange: (changes) => {
+    set((state) => ({
+      nodes: applyNodeChanges(changes, state.nodes),
     }));
   },
 
-  // Update node positions after drag
-  updateNodePositions: (nodes) => {
-    set({ nodes });
-  },
-
-  // Remove a node
-  removeNode: (nodeId) => {
-    set(state => ({
-      nodes: state.nodes.filter(node => node.id !== nodeId),
-      // Also remove any connected edges
-      edges: state.edges.filter(
-        edge => edge.source !== nodeId && edge.target !== nodeId
-      )
+  // Edge Operations
+  onEdgesChange: (changes) => {
+    set((state) => ({
+      edges: applyEdgeChanges(changes, state.edges),
     }));
   },
 
-  // Remove an edge
-  removeEdge: (edgeId) => {
-    set(state => ({
-      edges: state.edges.filter(edge => edge.id !== edgeId)
+  onConnect: (connection) => {
+    set((state) => ({
+      edges: addEdge(
+        { 
+          ...connection, 
+          id: `e${nanoid()}`,
+          animated: true,
+          style: { stroke: '#555' },
+        }, 
+        state.edges
+      ),
     }));
   },
 
-  // Select a node to show in inspector
+  // Selection
   setSelectedNode: (node) => {
     set({ selectedNode: node });
   },
 
-  // Update the nodes
-  setNodes: (nodes) => {
-    set({ nodes });
-  },
-
-  // Update the edges
-  setEdges: (edges) => {
-    set({ edges });
-  },
-
-  // Tab management
-  addTab: () => {
-    const tabCount = get().tabs.length + 1;
-    const newTab = { id: nanoid(), name: `Flow ${tabCount}` };
-    set(state => ({
-      tabs: [...state.tabs, newTab],
-      tabIndex: state.tabs.length // Set to new tab
+  updateNodeData: (nodeId, data) => {
+    set((state) => ({
+      nodes: state.nodes.map((node) => {
+        if (node.id === nodeId) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              ...data,
+            },
+          };
+        }
+        return node;
+      }),
+      // Also update selected node if it's the one being edited
+      selectedNode: state.selectedNode?.id === nodeId 
+        ? { ...state.selectedNode, data: { ...state.selectedNode.data, ...data } } 
+        : state.selectedNode
     }));
   },
 
-  removeTab: (tabId) => {
-    set(state => {
-      const newTabs = state.tabs.filter(tab => tab.id !== tabId);
-      let newIndex = state.tabIndex;
-      
-      // Adjust tab index if needed
-      if (newTabs.length <= newIndex) {
-        newIndex = Math.max(0, newTabs.length - 1);
-      }
-      
-      return {
-        tabs: newTabs,
-        tabIndex: newIndex
-      };
-    });
-  },
-
-  setTabIndex: (index) => {
-    set({ tabIndex: index });
-  },
-
-  // Reorder tabs
-  reorderTabs: (dragIndex, hoverIndex) => {
-    set(state => {
-      const newTabs = [...state.tabs];
-      const draggedTab = newTabs[dragIndex];
-      
-      // Remove the dragged tab
-      newTabs.splice(dragIndex, 1);
-      // Insert it at the new position
-      newTabs.splice(hoverIndex, 0, draggedTab);
-      
-      // Adjust the tabIndex if needed
-      let newTabIndex = state.tabIndex;
-      if (state.tabIndex === dragIndex) {
-        newTabIndex = hoverIndex;
-      } else if (
-        (dragIndex < state.tabIndex && hoverIndex >= state.tabIndex) ||
-        (dragIndex > state.tabIndex && hoverIndex <= state.tabIndex)
-      ) {
-        // Adjust index when tabs are reordered around the current tab
-        newTabIndex = dragIndex < hoverIndex ? state.tabIndex - 1 : state.tabIndex + 1;
-      }
-      
-      return {
-        tabs: newTabs,
-        tabIndex: newTabIndex
-      };
-    });
-  }
+  // Reset store
+  reset: () => set(initialState),
 }));
+
+// Helper functions for node creation
+function getCategoryColor(category) {
+  const colors = {
+    trigger: '#ff9900',
+    app: '#00a8ff',
+    logic: '#7352ff',
+    data: '#00c853',
+    ai: '#ff5252',
+  };
+  return colors[category] || '#888';
+}
+
+function getDefaultPropertiesForType(type) {
+  // Define default properties for different node types
+  const defaultProps = {
+    // Triggers
+    cron: { schedule: '* * * * *' },
+    webhook: { method: 'POST', path: '/webhook' },
+    
+    // Apps
+    slack: { channel: 'general', message: '' },
+    discord: { channel: '', message: '' },
+    github: { repo: '', action: 'issue' },
+    
+    // Logic
+    if: { condition: '' },
+    switch: { value: '', cases: [] },
+    merge: { mode: 'append' },
+    wait: { duration: 5, unit: 'minutes' },
+    
+    // Data
+    http: { url: '', method: 'GET', headers: {} },
+    json: { operation: 'parse' },
+    database: { connection: '', query: '' },
+    
+    // AI
+    llm: { 
+      model: 'gpt-4',
+      prompt: '',
+      temperature: 0.7,
+      maxTokens: 1000
+    },
+    agent: { 
+      goal: '',
+      tools: [],
+      memory: true
+    },
+    embedding: { 
+      model: 'text-embedding-3-small',
+      text: ''
+    },
+    vectorSearch: {
+      database: '',
+      query: '',
+      topK: 5
+    },
+    imageGen: {
+      model: 'dall-e-3',
+      prompt: '',
+      size: '1024x1024'
+    },
+    speechToText: {
+      model: 'whisper-1',
+      language: 'en'
+    }
+  };
+  
+  return defaultProps[type] || {};
+}

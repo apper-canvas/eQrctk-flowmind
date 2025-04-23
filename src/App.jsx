@@ -1,29 +1,29 @@
 import React from 'react';
-import TabBar from './components/TabBar/TabBar';
+import { ReactFlowProvider } from 'reactflow';
+import 'reactflow/dist/style.css';
+
 import TopBar from './components/TopBar/TopBar';
 import NodeLibrary from './components/NodeLibrary/NodeLibrary';
 import FlowCanvas from './components/Canvas/FlowCanvas';
-import Inspector from './components/Inspector/Inspector';
+import PropertyPanel from './components/PropertyPanel/PropertyPanel';
+import TabBar from './components/TabBar/TabBar';
 
-function App() {
+const App = () => {
   return (
-    <div className="flex flex-col h-screen">
-      <TabBar />
+    <div className="flex flex-col h-screen overflow-hidden bg-gray-50">
       <TopBar />
-      
-      <div className="flex-1 flex overflow-hidden">
-        <NodeLibrary />
-        
-        <div className="flex-1 flex">
+      <TabBar />
+      <div className="flex flex-1 overflow-hidden">
+        <ReactFlowProvider>
+          <NodeLibrary />
           <div className="flex-1 relative">
             <FlowCanvas />
           </div>
-          
-          <Inspector />
-        </div>
+          <PropertyPanel />
+        </ReactFlowProvider>
       </div>
     </div>
   );
-}
+};
 
 export default App;
