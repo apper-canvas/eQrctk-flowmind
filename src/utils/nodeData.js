@@ -35,6 +35,7 @@ export const nodeDefinitions = [
   { type: 'subscription', label: 'Event Subscription', description: 'Trigger on external events', category: 'trigger' },
   
   // App Integration Nodes
+  { type: 'webhook', label: 'Webhook', description: 'Send or receive HTTP webhooks', category: 'app' },
   { type: 'slack', label: 'Slack', description: 'Send or receive Slack messages', category: 'app' },
   { type: 'discord', label: 'Discord', description: 'Interact with Discord channels', category: 'app' },
   { type: 'github', label: 'GitHub', description: 'Trigger on GitHub events', category: 'app' },
