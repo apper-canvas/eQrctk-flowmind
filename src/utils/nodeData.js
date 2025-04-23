@@ -76,7 +76,7 @@ export const nodeCategories = {
   },
   apps: {
     label: 'Apps',
-    icon: Apps,
+    icon: Grip,
     description: 'Connect to external services',
     nodes: nodeDefinitions.filter(node => node.category === 'app')
   },
