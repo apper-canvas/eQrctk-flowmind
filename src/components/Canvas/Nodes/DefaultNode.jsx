@@ -1,92 +1,124 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Handle, Position } from 'reactflow';
-import { useFlowStore } from '../../../store/flowStore';
 
-const DefaultNode = ({ id, data }) => {
-  const { type, label, category, properties } = data;
-  const setSelectedNode = useFlowStore((state) => state.setSelectedNode);
-  
-  // Node color based on category
-  const getCategoryColor = (category) => {
-    const colors = {
-      trigger: '#ff9900',
-      app: '#00a8ff',
-      logic: '#7352ff',
-      data: '#00c853',
-      ai: '#ff5252',
-    };
-    return colors[category] || '#888';
+const DefaultNode = ({ data, selected }) => {
+  // Calculate border color based on node type and selection state
+  const getBorderColor = () => {
+    if (selected) return 'border-blue-500';
+    
+    switch (data.type) {
+      case 'trigger':
+        return 'border-orange-500';
+      case 'action':
+      case 'app':
+        return 'border-green-500';
+      case 'logic':
+        return 'border-purple-500';
+      case 'ai':
+        return 'border-red-500';
+      default:
+        return 'border-gray-300 dark:border-gray-700';
+    }
   };
-  
-  const getBgColor = (category) => {
-    const colors = {
-      trigger: 'bg-orange-50',
-      app: 'bg-blue-50',
-      logic: 'bg-purple-50',
-      data: 'bg-green-50',
-      ai: 'bg-red-50',
-    };
-    return colors[category] || 'bg-gray-50';
+
+  // Calculate header background color based on node type
+  const getHeaderColor = () => {
+    switch (data.type) {
+      case 'trigger':
+        return 'bg-orange-100 dark:bg-orange-900';
+      case 'action':
+      case 'app':
+        return 'bg-green-100 dark:bg-green-900';
+      case 'logic':
+        return 'bg-purple-100 dark:bg-purple-900';
+      case 'ai':
+        return 'bg-red-100 dark:bg-red-900';
+      default:
+        return 'bg-gray-100 dark:bg-gray-800';
+    }
   };
-  
-  const color = getCategoryColor(category);
-  const bgColorClass = getBgColor(category);
-  
-  const handleNodeClick = () => {
-    setSelectedNode({ id, data });
+
+  // Calculate icon background color
+  const getIconBgColor = () => {
+    switch (data.type) {
+      case 'trigger':
+        return 'bg-orange-500';
+      case 'action':
+      case 'app':
+        return 'bg-green-500';
+      case 'logic':
+        return 'bg-purple-500';
+      case 'ai':
+        return 'bg-red-500';
+      default:
+        return 'bg-gray-500';
+    }
+  };
+
+  // Render the node icon if provided
+  const renderIcon = () => {
+    const Icon = data.icon;
+    
+    if (Icon) {
+      return (
+        <div className={`${getIconBgColor()} p-1 rounded-lg text-white`}>
+          <Icon size={16} />
+        </div>
+      );
+    }
+    
+    return null;
   };
 
   return (
     <div 
-      className={`rounded-lg border-2 shadow-sm ${bgColorClass} w-60`}
-      style={{ borderColor: color }}
-      onClick={handleNodeClick}
+      className={`min-w-[180px] max-w-[300px] shadow-md rounded-lg bg-white dark:bg-gray-900 border-2 ${getBorderColor()} transition-colors`}
     >
-      {/* Input handle */}
+      {/* Input handle at the top */}
       <Handle
         type="target"
-        position={Position.Left}
-        style={{ background: color, width: 8, height: 8 }}
+        position={Position.Top}
+        className="w-3 h-3 bg-blue-500"
       />
-      
+
       {/* Node header */}
-      <div 
-        className="px-3 py-2 rounded-t-md font-medium flex items-center"
-        style={{ background: color, color: '#fff' }}
-      >
-        {data.icon && <span className="mr-2">{data.icon()}</span>}
-        <div>{label}</div>
+      <div className={`flex items-center gap-2 px-3 py-2 ${getHeaderColor()} rounded-t-md`}>
+        {renderIcon()}
+        <div className="font-medium truncate text-gray-800 dark:text-gray-200">
+          {data.label}
+        </div>
       </div>
-      
+
       {/* Node content */}
       <div className="p-3">
-        <div className="text-xs text-gray-500">{data.description}</div>
+        {data.description && (
+          <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+            {data.description}
+          </div>
+        )}
         
-        {/* Show a few key properties if available */}
-        {properties && Object.keys(properties).length > 0 && (
-          <div className="mt-2 text-xs space-y-1">
-            {Object.entries(properties).slice(0, 3).map(([key, value]) => (
-              <div key={key} className="flex justify-between">
-                <span className="font-medium">{key}:</span>
-                <span className="truncate max-w-[120px]">
-                  {typeof value === 'object' 
-                    ? JSON.stringify(value).substring(0, 15) + '...' 
-                    : String(value).substring(0, 15)}
+        {data.parameters && (
+          <div className="mt-2 text-xs">
+            {Object.entries(data.parameters).map(([key, value]) => (
+              <div key={key} className="flex justify-between mb-1">
+                <span className="text-gray-500 dark:text-gray-400">{key}:</span>
+                <span className="text-gray-700 dark:text-gray-300 font-medium truncate max-w-[120px]">
+                  {typeof value === 'object' ? JSON.stringify(value) : value.toString()}
                 </span>
               </div>
             ))}
           </div>
         )}
       </div>
-      
-      {/* Output handle */}
+
+      {/* Output handle at the bottom */}
       <Handle
         type="source"
-        position={Position.Right}
-        style={{ background: color, width: 8, height: 8 }}
+        position={Position.Bottom}
+        className="w-3 h-3 bg-blue-500"
       />
     </div>
   );
 };
 
-export default DefaultNode;
+export default memo(DefaultNode);

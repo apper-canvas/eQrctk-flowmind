@@ -1,174 +1,141 @@
 import { create } from 'zustand';
 import { nanoid } from 'nanoid';
-import { addEdge, applyNodeChanges, applyEdgeChanges } from 'reactflow';
 
-// Initial flow state
-const initialState = {
+// Create the flow store with zustand
+export const useFlowStore = create((set, get) => ({
   nodes: [],
   edges: [],
-  selectedNode: null,
-};
+  selectedNodeId: null,
+  history: [],
+  historyIndex: -1,
 
-// Create the store
-export const useFlowStore = create((set, get) => ({
-  // State
-  ...initialState,
-
-  // Node Operations
-  addNode: (node) => {
+  addNode: (nodeData) => {
+    const id = nanoid(6);
     const newNode = {
-      id: nanoid(),
-      data: { 
-        label: node.label,
-        type: node.type,
-        category: node.category,
-        description: node.description,
-        // Default properties for the node type
-        properties: {
-          // Common properties
-          name: `${node.label}_${nanoid(4)}`,
-          description: '',
-          // Type-specific default properties will be added based on node type
-          ...getDefaultPropertiesForType(node.type),
-        }
+      id,
+      type: nodeData.type || 'default',
+      position: nodeData.position || { x: 250, y: 250 },
+      data: {
+        label: nodeData.label || 'New Node',
+        ...nodeData,
       },
-      position: node.position,
-      type: 'default', // or custom node type
-      style: {
-        borderColor: getCategoryColor(node.category),
-      }
+    };
+
+    set((state) => {
+      const newState = {
+        nodes: [...state.nodes, newNode],
+        selectedNodeId: id,
+      };
+      return newState;
+    });
+    
+    get().saveHistory();
+    return id;
+  },
+
+  updateNode: (id, data) => {
+    set((state) => ({
+      nodes: state.nodes.map((node) => 
+        node.id === id 
+          ? { ...node, data: { ...node.data, ...data } } 
+          : node
+      ),
+    }));
+    get().saveHistory();
+  },
+
+  deleteNode: (id) => {
+    set((state) => ({
+      nodes: state.nodes.filter((node) => node.id !== id),
+      edges: state.edges.filter(
+        (edge) => edge.source !== id && edge.target !== id
+      ),
+      selectedNodeId: state.selectedNodeId === id ? null : state.selectedNodeId,
+    }));
+    get().saveHistory();
+  },
+
+  addEdge: (edge) => {
+    const newEdge = {
+      ...edge,
+      id: `${edge.source}-${edge.target}`,
     };
     
     set((state) => ({
-      nodes: [...state.nodes, newNode],
-      selectedNode: newNode
+      edges: [...state.edges, newEdge],
     }));
-    return newNode.id;
+    get().saveHistory();
   },
 
-  onNodesChange: (changes) => {
+  deleteEdge: (id) => {
     set((state) => ({
-      nodes: applyNodeChanges(changes, state.nodes),
+      edges: state.edges.filter((edge) => edge.id !== id),
     }));
+    get().saveHistory();
   },
 
-  // Edge Operations
-  onEdgesChange: (changes) => {
-    set((state) => ({
-      edges: applyEdgeChanges(changes, state.edges),
-    }));
+  setSelectedNode: (nodeId) => {
+    set({ selectedNodeId: nodeId });
   },
 
-  onConnect: (connection) => {
+  updateNodePosition: (nodeId, position) => {
     set((state) => ({
-      edges: addEdge(
-        { 
-          ...connection, 
-          id: `e${nanoid()}`,
-          animated: true,
-          style: { stroke: '#555' },
-        }, 
-        state.edges
+      nodes: state.nodes.map((node) =>
+        node.id === nodeId ? { ...node, position } : node
       ),
     }));
   },
 
-  // Selection
-  setSelectedNode: (node) => {
-    set({ selectedNode: node });
+  clearSelection: () => {
+    set({ selectedNodeId: null });
   },
 
-  updateNodeData: (nodeId, data) => {
-    set((state) => ({
-      nodes: state.nodes.map((node) => {
-        if (node.id === nodeId) {
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              ...data,
-            },
-          };
-        }
-        return node;
-      }),
-      // Also update selected node if it's the one being edited
-      selectedNode: state.selectedNode?.id === nodeId 
-        ? { ...state.selectedNode, data: { ...state.selectedNode.data, ...data } } 
-        : state.selectedNode
-    }));
+  // History management
+  saveHistory: () => {
+    const { nodes, edges, history, historyIndex } = get();
+    const currentState = { nodes: [...nodes], edges: [...edges] };
+    
+    // If we're not at the end of history, truncate it
+    const newHistory = history.slice(0, historyIndex + 1);
+    
+    set({
+      history: [...newHistory, currentState],
+      historyIndex: historyIndex + 1,
+    });
   },
 
-  // Reset store
-  reset: () => set(initialState),
+  undo: () => {
+    const { historyIndex, history } = get();
+    if (historyIndex > 0) {
+      const prevState = history[historyIndex - 1];
+      set({
+        nodes: [...prevState.nodes],
+        edges: [...prevState.edges],
+        historyIndex: historyIndex - 1,
+      });
+    }
+  },
+
+  redo: () => {
+    const { historyIndex, history } = get();
+    if (historyIndex < history.length - 1) {
+      const nextState = history[historyIndex + 1];
+      set({
+        nodes: [...nextState.nodes],
+        edges: [...nextState.edges],
+        historyIndex: historyIndex + 1,
+      });
+    }
+  },
+
+  // For debugging
+  getState: () => {
+    return {
+      nodes: get().nodes,
+      edges: get().edges,
+      selectedNodeId: get().selectedNodeId,
+    };
+  },
 }));
 
-// Helper functions for node creation
-function getCategoryColor(category) {
-  const colors = {
-    trigger: '#ff9900',
-    app: '#00a8ff',
-    logic: '#7352ff',
-    data: '#00c853',
-    ai: '#ff5252',
-  };
-  return colors[category] || '#888';
-}
-
-function getDefaultPropertiesForType(type) {
-  // Define default properties for different node types
-  const defaultProps = {
-    // Triggers
-    cron: { schedule: '* * * * *' },
-    webhook: { method: 'POST', path: '/webhook' },
-    
-    // Apps
-    slack: { channel: 'general', message: '' },
-    discord: { channel: '', message: '' },
-    github: { repo: '', action: 'issue' },
-    
-    // Logic
-    if: { condition: '' },
-    switch: { value: '', cases: [] },
-    merge: { mode: 'append' },
-    wait: { duration: 5, unit: 'minutes' },
-    
-    // Data
-    http: { url: '', method: 'GET', headers: {} },
-    json: { operation: 'parse' },
-    database: { connection: '', query: '' },
-    
-    // AI
-    llm: { 
-      model: 'gpt-4',
-      prompt: '',
-      temperature: 0.7,
-      maxTokens: 1000
-    },
-    agent: { 
-      goal: '',
-      tools: [],
-      memory: true
-    },
-    embedding: { 
-      model: 'text-embedding-3-small',
-      text: ''
-    },
-    vectorSearch: {
-      database: '',
-      query: '',
-      topK: 5
-    },
-    imageGen: {
-      model: 'dall-e-3',
-      prompt: '',
-      size: '1024x1024'
-    },
-    speechToText: {
-      model: 'whisper-1',
-      language: 'en'
-    }
-  };
-  
-  return defaultProps[type] || {};
-}
+export default useFlowStore;
