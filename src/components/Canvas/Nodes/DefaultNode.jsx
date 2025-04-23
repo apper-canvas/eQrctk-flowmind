@@ -1,76 +1,55 @@
 import React from 'react';
 import { Handle, Position } from 'reactflow';
 import { useFlowStore } from '../../../store/flowStore';
+import { nodeDefinitions } from '../../../data/nodeData';
 
-const DefaultNode = ({ data, id }) => {
-  const setSelectedNode = useFlowStore(state => state.setSelectedNode);
-  const nodes = useFlowStore(state => state.nodes);
+const DefaultNode = ({ id, data }) => {
+  const { nodeType, label } = data;
   
-  const handleNodeClick = () => {
-    const node = nodes.find(node => node.id === id);
-    if (node) {
-      setSelectedNode(node);
+  // Find the node definition to get icon and category
+  const nodeDef = nodeDefinitions.find(node => node.type === nodeType);
+  
+  // Get the corresponding colors based on category
+  const getCategoryColor = (category) => {
+    switch (category) {
+      case 'trigger':
+        return 'bg-yellow-100 border-yellow-400';
+      case 'app':
+        return 'bg-blue-100 border-blue-400';
+      case 'logic':
+        return 'bg-purple-100 border-purple-400';
+      case 'data':
+        return 'bg-green-100 border-green-400';
+      case 'ai':
+        return 'bg-red-100 border-red-400';
+      default:
+        return 'bg-gray-100 border-gray-400';
     }
   };
   
-  let backgroundColor = '#f8fafc'; // Default light color
-  let textColor = '#1e293b';       // Default dark text
-  
-  // Set colors based on category
-  switch (data.category) {
-    case 'trigger':
-      backgroundColor = '#fee2e2'; // Light red
-      break;
-    case 'app':
-      backgroundColor = '#e0f2fe'; // Light blue
-      break;
-    case 'logic':
-      backgroundColor = '#fef3c7'; // Light yellow
-      break;
-    case 'data':
-      backgroundColor = '#dcfce7'; // Light green
-      break;
-    case 'ai':
-      backgroundColor = '#f3e8ff'; // Light purple
-      break;
-    default:
-      backgroundColor = '#f8fafc'; // Default light gray
-  }
+  const nodeColor = nodeDef ? getCategoryColor(nodeDef.category) : 'bg-gray-100 border-gray-400';
+  const IconComponent = nodeDef?.icon;
   
   return (
-    <div 
-      className="rounded-lg border border-gray-200 shadow-sm min-w-[180px] cursor-pointer"
-      onClick={handleNodeClick}
-      style={{ backgroundColor }}
-    >
-      {/* Input Handle */}
+    <div className={`rounded-lg border-2 ${nodeColor} p-3 min-w-[150px] shadow-md`}>
       <Handle
         type="target"
-        position={Position.Left}
+        position={Position.Top}
         className="w-3 h-3 bg-blue-500"
       />
       
-      {/* Node Header */}
-      <div className="p-3 border-b border-gray-200">
-        <div className="flex items-center gap-2">
-          {data.icon && (
-            <span className="text-gray-700">
-              {data.icon}
-            </span>
-          )}
-          <span className="font-medium text-sm">{data.label}</span>
-        </div>
+      <div className="flex items-center space-x-2 mb-2">
+        {IconComponent && <div className="text-gray-700"><IconComponent /></div>}
+        <div className="font-medium text-gray-800">{label}</div>
       </div>
       
-      {/* Node Content */}
-      <div className="p-3">
-        <p className="text-xs text-gray-600">{data.description || 'No description'}</p>
-      </div>
+      {nodeDef && (
+        <div className="text-xs text-gray-600">{nodeDef.description}</div>
+      )}
       
-      {/* Output Handle */}
       <Handle
         type="source"
-        position={Position.Right}
+        position={Position.Bottom}
         className="w-3 h-3 bg-blue-500"
       />
     </div>

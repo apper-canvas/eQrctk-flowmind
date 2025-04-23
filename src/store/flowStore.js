@@ -1,92 +1,151 @@
 import { create } from 'zustand';
 import { nanoid } from 'nanoid';
-import { addEdge, applyNodeChanges, applyEdgeChanges } from 'reactflow';
 
-// Create and export the store hook directly
 export const useFlowStore = create((set, get) => ({
   nodes: [],
   edges: [],
-  nextNodeId: 1,
   selectedNode: null,
-  
-  // Nodes actions
-  setNodes: (nodes) => set({ nodes }),
-  
-  addNode: (nodeData, position) => {
-    const id = `node_${get().nextNodeId}`;
+  nodeCount: {},
+  tabIndex: 0,
+  tabs: [{ id: '1', name: 'Flow 1' }],
+
+  // Add node to the canvas
+  addNode: (nodeType, position, data = {}) => {
+    const { nodeCount } = get();
+    
+    // Track count of each node type to create unique IDs
+    const count = (nodeCount[nodeType] || 0) + 1;
     
     const newNode = {
-      id,
-      type: nodeData.type || 'default',
+      id: `${nodeType}-${count}`,
+      type: 'default',
       position,
-      data: { 
-        ...nodeData,
-        label: nodeData.label || 'Node',
-      },
+      data: {
+        ...data,
+        nodeType,
+        label: `${data.label || nodeType} ${count}`
+      }
     };
     
-    set((state) => ({ 
+    set(state => ({
       nodes: [...state.nodes, newNode],
-      nextNodeId: state.nextNodeId + 1,
-      selectedNode: newNode
+      nodeCount: {
+        ...state.nodeCount,
+        [nodeType]: count
+      }
     }));
     
-    return id;
+    return newNode;
   },
-  
-  onNodesChange: (changes) => {
-    set((state) => ({
-      nodes: applyNodeChanges(changes, state.nodes),
-    }));
-  },
-  
-  // Edges actions
-  setEdges: (edges) => set({ edges }),
-  
-  addEdge: (connection) => {
-    const newEdge = {
-      id: `edge-${nanoid()}`,
-      ...connection,
+
+  // Connect two nodes with an edge
+  addEdge: (params) => {
+    const edge = {
+      id: nanoid(),
+      ...params
     };
     
-    set((state) => ({
-      edges: addEdge(newEdge, state.edges),
+    set(state => ({
+      edges: [...state.edges, edge]
     }));
   },
-  
-  onEdgesChange: (changes) => {
-    set((state) => ({
-      edges: applyEdgeChanges(changes, state.edges),
+
+  // Update node positions after drag
+  updateNodePositions: (nodes) => {
+    set({ nodes });
+  },
+
+  // Remove a node
+  removeNode: (nodeId) => {
+    set(state => ({
+      nodes: state.nodes.filter(node => node.id !== nodeId),
+      // Also remove any connected edges
+      edges: state.edges.filter(
+        edge => edge.source !== nodeId && edge.target !== nodeId
+      )
     }));
   },
-  
-  // Selected node actions
-  setSelectedNode: (node) => set({ selectedNode: node }),
-  
-  updateSelectedNode: (data) => {
-    set((state) => {
-      if (!state.selectedNode) return state;
+
+  // Remove an edge
+  removeEdge: (edgeId) => {
+    set(state => ({
+      edges: state.edges.filter(edge => edge.id !== edgeId)
+    }));
+  },
+
+  // Select a node to show in inspector
+  setSelectedNode: (node) => {
+    set({ selectedNode: node });
+  },
+
+  // Update the nodes
+  setNodes: (nodes) => {
+    set({ nodes });
+  },
+
+  // Update the edges
+  setEdges: (edges) => {
+    set({ edges });
+  },
+
+  // Tab management
+  addTab: () => {
+    const tabCount = get().tabs.length + 1;
+    const newTab = { id: nanoid(), name: `Flow ${tabCount}` };
+    set(state => ({
+      tabs: [...state.tabs, newTab],
+      tabIndex: state.tabs.length // Set to new tab
+    }));
+  },
+
+  removeTab: (tabId) => {
+    set(state => {
+      const newTabs = state.tabs.filter(tab => tab.id !== tabId);
+      let newIndex = state.tabIndex;
       
-      const updatedNodes = state.nodes.map((node) => {
-        if (node.id === state.selectedNode.id) {
-          return {
-            ...node,
-            data: { ...node.data, ...data },
-          };
-        }
-        return node;
-      });
+      // Adjust tab index if needed
+      if (newTabs.length <= newIndex) {
+        newIndex = Math.max(0, newTabs.length - 1);
+      }
       
       return {
-        nodes: updatedNodes,
-        selectedNode: {
-          ...state.selectedNode,
-          data: { ...state.selectedNode.data, ...data },
-        },
+        tabs: newTabs,
+        tabIndex: newIndex
       };
     });
   },
-  
-  // Clear the entire canvas
-  clearCanvas: () => set({ nodes: [], edges: [], nextNodeId: 1, selectedNode: null }),
+
+  setTabIndex: (index) => {
+    set({ tabIndex: index });
+  },
+
+  // Reorder tabs
+  reorderTabs: (dragIndex, hoverIndex) => {
+    set(state => {
+      const newTabs = [...state.tabs];
+      const draggedTab = newTabs[dragIndex];
+      
+      // Remove the dragged tab
+      newTabs.splice(dragIndex, 1);
+      // Insert it at the new position
+      newTabs.splice(hoverIndex, 0, draggedTab);
+      
+      // Adjust the tabIndex if needed
+      let newTabIndex = state.tabIndex;
+      if (state.tabIndex === dragIndex) {
+        newTabIndex = hoverIndex;
+      } else if (
+        (dragIndex < state.tabIndex && hoverIndex >= state.tabIndex) ||
+        (dragIndex > state.tabIndex && hoverIndex <= state.tabIndex)
+      ) {
+        // Adjust index when tabs are reordered around the current tab
+        newTabIndex = dragIndex < hoverIndex ? state.tabIndex - 1 : state.tabIndex + 1;
+      }
+      
+      return {
+        tabs: newTabs,
+        tabIndex: newTabIndex
+      };
+    });
+  }
 }));
