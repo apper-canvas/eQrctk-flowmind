@@ -3,98 +3,87 @@ import {
   Save, 
   Play, 
   Settings, 
-  Code, 
-  Sun, 
+  HelpCircle, 
   Moon, 
-  Menu, 
-  User, 
-  HelpCircle,
-  Key,
-  Bot
+  Sun,
+  Zap
 } from 'lucide-react';
 import { useFlowStore } from '../../store/flowStore';
 
 const TopBar = ({ toggleSidebar }) => {
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const { workflowName, setWorkflowName } = useFlowStore();
+  const [darkMode, setDarkMode] = useState(false);
+  const activeFlow = useFlowStore(state => state.getActiveFlow());
   
   const toggleDarkMode = () => {
-    if (isDarkMode) {
-      document.documentElement.classList.remove('dark');
-    } else {
+    setDarkMode(!darkMode);
+    if (!darkMode) {
       document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
     }
-    setIsDarkMode(!isDarkMode);
-  };
-
-  const handleNameChange = (e) => {
-    setWorkflowName(e.target.value);
   };
 
   return (
-    <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 py-2 px-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center">
-          <button 
-            onClick={toggleSidebar}
-            className="p-2 rounded-md text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 mr-2"
-          >
-            <Menu size={20} />
-          </button>
-          
-          <div className="font-bold text-xl mr-6 text-blue-600">FlowMind</div>
-          
-          <div className="flex items-center border-r border-slate-200 dark:border-slate-700 pr-4 mr-4">
-            <input
-              type="text"
-              value={workflowName}
-              onChange={handleNameChange}
-              className="font-medium text-slate-800 dark:text-slate-200 bg-transparent border-none focus:outline-none focus:ring-0 px-2 py-1 w-48"
-              placeholder="Unnamed Workflow"
-            />
-          </div>
-          
-          <div className="flex items-center space-x-1">
-            <button className="p-1.5 rounded-md text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
-              <Save size={18} />
-            </button>
-            <button className="px-3 py-1.5 rounded-md bg-blue-500 hover:bg-blue-600 text-white flex items-center">
-              <Play size={16} className="mr-1" />
-              <span>Run</span>
-            </button>
-          </div>
-        </div>
+    <div className="w-full bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center justify-between">
+      {/* Left side - App controls */}
+      <div className="flex items-center space-x-4">
+        <button 
+          onClick={toggleSidebar} 
+          className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md"
+          aria-label="Toggle sidebar"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-menu">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
         
-        <div className="flex items-center space-x-1">
-          <button className="p-1.5 rounded-md text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
-            <Bot size={18} />
-          </button>
-          <button className="p-1.5 rounded-md text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
-            <Key size={18} />
-          </button>
-          <button className="p-1.5 rounded-md text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
-            <Code size={18} />
-          </button>
-          <button className="p-1.5 rounded-md text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
-            <Settings size={18} />
-          </button>
-          <button 
-            className="p-1.5 rounded-md text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
-            onClick={toggleDarkMode}
-          >
-            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-          <button className="p-1.5 rounded-md text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
-            <HelpCircle size={18} />
-          </button>
-          <button className="ml-2 flex items-center text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100">
-            <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-1">
-              <User size={14} className="text-blue-600 dark:text-blue-300" />
-            </div>
-          </button>
+        <div className="flex items-center">
+          <div className="bg-blue-500 text-white p-1 rounded mr-2">
+            <Zap size={20} />
+          </div>
+          <span className="font-bold text-lg">WorkflowBuilder</span>
         </div>
       </div>
-    </header>
+      
+      {/* Center - Workflow Title */}
+      <div className="flex items-center">
+        <input 
+          type="text" 
+          value={activeFlow ? activeFlow.name : "Untitled Workflow"}
+          className="text-center font-medium bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-slate-600 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none px-2 py-1"
+        />
+      </div>
+      
+      {/* Right side - Actions */}
+      <div className="flex items-center space-x-2">
+        <button className="text-slate-600 dark:text-slate-300 p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md flex items-center">
+          <Save size={18} className="mr-1" />
+          <span className="hidden sm:inline">Save</span>
+        </button>
+        
+        <button className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-md flex items-center transition-colors">
+          <Play size={18} className="mr-1" />
+          <span>Run</span>
+        </button>
+        
+        <button className="text-slate-600 dark:text-slate-300 p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md">
+          <Settings size={18} />
+        </button>
+        
+        <button className="text-slate-600 dark:text-slate-300 p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md">
+          <HelpCircle size={18} />
+        </button>
+        
+        <button 
+          onClick={toggleDarkMode}
+          className="text-slate-600 dark:text-slate-300 p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md"
+        >
+          {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+      </div>
+    </div>
   );
 };
 

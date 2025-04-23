@@ -1,194 +1,138 @@
 import { 
-  AppWindow, // Changed from Apps to AppWindow which exists in lucide-react
-  Webhook, 
-  Activity, 
+  AppWindow, // Changed from non-existent 'Apps' to AppWindow
+  Zap, 
+  CircuitBoard, 
   Database, 
-  GitBranch, 
-  Bot, 
-  Terminal 
+  BrainCircuit,
+  Slack, 
+  Github, 
+  FileText,
+  Mail,
+  MessageSquare,
+  Globe
 } from 'lucide-react';
 
-export const nodeCategories = [
-  { id: 'trigger', label: 'Triggers' },
-  { id: 'app', label: 'Apps' },
-  { id: 'logic', label: 'Logic' },
-  { id: 'data', label: 'Data' },
-  { id: 'utils', label: 'Utils' },
-  { id: 'ai', label: 'AI' },
-];
-
+// Node definitions array with all available nodes
 export const nodeDefinitions = [
   // Triggers
   {
-    type: 'webhook_trigger',
-    label: 'Webhook Trigger',
-    description: 'Starts workflow when webhook is received',
+    type: 'webhook',
+    label: 'Webhook',
+    description: 'Receives HTTP requests to trigger workflows',
     category: 'trigger',
-    icon: Webhook,
-    defaultConfig: {
-      method: 'POST',
-      path: '/webhook',
-    },
+    icon: <Globe size={16} />
   },
   {
-    type: 'cron_trigger',
-    label: 'Cron Trigger',
-    description: 'Starts workflow on a time schedule',
+    type: 'cron',
+    label: 'Cron Scheduler',
+    description: 'Schedule workflows based on time intervals',
     category: 'trigger',
-    icon: Activity,
-    defaultConfig: {
-      expression: '0 * * * *', // Default: hourly
-    },
+    icon: <Zap size={16} />
+  },
+  {
+    type: 'email-trigger',
+    label: 'Email Trigger',
+    description: 'Trigger workflow when emails are received',
+    category: 'trigger',
+    icon: <Mail size={16} />
   },
   
   // Apps
   {
     type: 'webhook',
     label: 'Webhook',
-    description: 'Receive HTTP requests',
+    description: 'Create and manage webhooks for external systems',
     category: 'app',
-    icon: Webhook,
-    defaultConfig: {
-      method: 'POST',
-      path: '/webhook',
-    }
+    icon: <Globe size={16} />
   },
   {
     type: 'slack',
     label: 'Slack',
-    description: 'Post messages to Slack channels',
+    description: 'Send messages and interact with Slack',
     category: 'app',
-    icon: AppWindow, // Using AppWindow icon
-    defaultConfig: {
-      message: 'Hello from the workflow!',
-      channel: '#general',
-    }
+    icon: <Slack size={16} />
   },
   {
     type: 'discord',
     label: 'Discord',
-    description: 'Send messages to Discord channels',
+    description: 'Send messages and interact with Discord',
     category: 'app',
-    icon: AppWindow, // Using AppWindow icon
-    defaultConfig: {
-      message: 'Hello from the workflow!',
-      channel: 'general',
-    }
+    icon: <MessageSquare size={16} />
   },
   {
     type: 'github',
     label: 'GitHub',
-    description: 'Create issues, PRs, and more',
+    description: 'Interact with GitHub repositories and issues',
     category: 'app',
-    icon: AppWindow, // Using AppWindow icon
-    defaultConfig: {
-      action: 'create_issue',
-      title: 'New issue from workflow',
-      body: 'This issue was created automatically.',
-      repo: 'owner/repo',
-    }
+    icon: <Github size={16} />
   },
   
   // Logic
   {
     type: 'if',
-    label: 'IF',
-    description: 'Conditional branching',
+    label: 'IF Condition',
+    description: 'Branch workflow based on conditions',
     category: 'logic',
-    icon: GitBranch,
-    defaultConfig: {
-      condition: '{{data.value > 10}}',
-    }
+    icon: <CircuitBoard size={16} />
   },
   {
     type: 'switch',
-    label: 'SWITCH',
-    description: 'Multi-path branching',
+    label: 'Switch',
+    description: 'Multi-branch conditions based on values',
     category: 'logic',
-    icon: GitBranch,
-    defaultConfig: {
-      field: '{{data.status}}',
-      cases: [
-        { value: 'success', label: 'Success' },
-        { value: 'error', label: 'Error' },
-        { value: 'default', label: 'Default' },
-      ]
-    }
+    icon: <CircuitBoard size={16} />
+  },
+  {
+    type: 'loop',
+    label: 'Loop',
+    description: 'Iterate over arrays or repeat actions',
+    category: 'logic',
+    icon: <CircuitBoard size={16} />
   },
   
   // Data
   {
-    type: 'http_request',
+    type: 'http-request',
     label: 'HTTP Request',
-    description: 'Make API calls to external services',
+    description: 'Make HTTP requests to external APIs',
     category: 'data',
-    icon: Database,
-    defaultConfig: {
-      method: 'GET',
-      url: 'https://api.example.com/data',
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    }
+    icon: <Database size={16} />
   },
   {
-    type: 'json_transform',
-    label: 'JSON Transform',
-    description: 'Manipulate JSON data',
+    type: 'csv',
+    label: 'CSV Parser',
+    description: 'Parse and process CSV data',
     category: 'data',
-    icon: Database,
-    defaultConfig: {
-      operation: 'map',
-      expression: '{{item.value * 2}}',
-    }
-  },
-  
-  // Utils
-  {
-    type: 'code',
-    label: 'Code',
-    description: 'Run custom JavaScript code',
-    category: 'utils',
-    icon: Terminal,
-    defaultConfig: {
-      code: 'return { result: items.map(item => item.value * 2) };',
-    }
+    icon: <FileText size={16} />
   },
   {
-    type: 'delay',
-    label: 'Delay',
-    description: 'Pause workflow execution',
-    category: 'utils',
-    icon: Terminal,
-    defaultConfig: {
-      duration: 1000, // milliseconds
-    }
+    type: 'data-transform',
+    label: 'Data Transform',
+    description: 'Transform data between different formats',
+    category: 'data',
+    icon: <Database size={16} />
   },
   
   // AI
   {
-    type: 'llm_call',
+    type: 'llm-call',
     label: 'LLM Call',
-    description: 'Call a language model with a prompt',
+    description: 'Make calls to language models like GPT-4',
     category: 'ai',
-    icon: Bot,
-    defaultConfig: {
-      model: 'gpt-4',
-      prompt: 'Summarize the following text: {{data.text}}',
-      temperature: 0.7,
-    }
+    icon: <BrainCircuit size={16} />
   },
   {
-    type: 'agent_runner',
+    type: 'agent-runner',
     label: 'Agent Runner',
-    description: 'Run an AI agent with goals',
+    description: 'Run an AI agent with goals and tools',
     category: 'ai',
-    icon: Bot,
-    defaultConfig: {
-      model: 'gpt-4',
-      goal: 'Research the topic and provide a detailed report',
-      tools: ['search', 'summarize', 'analyze'],
-      maxIterations: 5,
-    }
+    icon: <BrainCircuit size={16} />
   },
+  {
+    type: 'image-gen',
+    label: 'Image Generator',
+    description: 'Generate images using AI models',
+    category: 'ai',
+    icon: <BrainCircuit size={16} />
+  }
 ];

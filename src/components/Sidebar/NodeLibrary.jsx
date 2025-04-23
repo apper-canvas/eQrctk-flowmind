@@ -1,146 +1,147 @@
 import { useState } from 'react';
-import { Search, ChevronDown, ChevronRight, BookOpen, Package } from 'lucide-react';
-import { nodeCategories } from '../../utils/nodeData';
+import { 
+  Search, 
+  AppWindow, // Changed from non-existent 'Apps' icon
+  Zap, 
+  CircuitBoard, 
+  Database, 
+  BrainCircuit 
+} from 'lucide-react';
+import { nodeDefinitions } from '../../data/nodeData';
 
 const NodeLibrary = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [expandedCategories, setExpandedCategories] = useState({
-    triggers: true,
-    apps: true,
-    logic: true,
-    data: true,
-    ai: true,
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
+  const [hoveredNode, setHoveredNode] = useState(null);
+
+  const categories = {
+    all: { icon: <Search size={20} />, label: 'All' },
+    trigger: { icon: <Zap size={20} />, label: 'Triggers' },
+    app: { icon: <AppWindow size={20} />, label: 'Apps' }, // Changed from Apps to AppWindow
+    logic: { icon: <CircuitBoard size={20} />, label: 'Logic' },
+    data: { icon: <Database size={20} />, label: 'Data' },
+    ai: { icon: <BrainCircuit size={20} />, label: 'AI' }
+  };
+
+  const filteredNodes = nodeDefinitions.filter(node => {
+    const matchesSearch = node.label.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         node.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = activeTab === 'all' || node.category === activeTab;
+    return matchesSearch && matchesCategory;
   });
-  const [activeTab, setActiveTab] = useState('nodes'); // 'nodes' or 'marketplace'
 
-  const toggleCategory = (category) => {
-    setExpandedCategories({
-      ...expandedCategories,
-      [category]: !expandedCategories[category],
-    });
-  };
-
-  // Filter nodes based on search term
-  const filterNodes = (nodes) => {
-    if (!searchTerm) return nodes;
-    return nodes.filter(
-      (node) =>
-        node.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        node.description.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  };
-
-  // Handle node drag start to transfer data to canvas
   const onDragStart = (event, nodeType, category) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
-    event.dataTransfer.setData('nodeCategory', category);
+    event.dataTransfer.setData('category', category);
     event.dataTransfer.effectAllowed = 'move';
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700">
-      {/* Tabs */}
-      <div className="flex border-b border-slate-200 dark:border-slate-700">
-        <button
-          className={`flex-1 py-3 text-center ${
-            activeTab === 'nodes'
-              ? 'text-blue-500 border-b-2 border-blue-500'
-              : 'text-slate-600 dark:text-slate-400'
-          }`}
-          onClick={() => setActiveTab('nodes')}
-        >
-          <BookOpen size={16} className="inline mr-2" />
-          Nodes
-        </button>
-        <button
-          className={`flex-1 py-3 text-center ${
-            activeTab === 'marketplace'
-              ? 'text-blue-500 border-b-2 border-blue-500'
-              : 'text-slate-600 dark:text-slate-400'
-          }`}
-          onClick={() => setActiveTab('marketplace')}
-        >
-          <Package size={16} className="inline mr-2" />
-          Marketplace
-        </button>
-      </div>
-
+    <div className="h-full flex flex-col bg-white dark:bg-slate-800 shadow-md">
       {/* Search Bar */}
       <div className="p-3 border-b border-slate-200 dark:border-slate-700">
         <div className="relative">
-          <Search
-            size={16}
-            className="absolute top-2.5 left-3 text-slate-400"
-          />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
           <input
             type="text"
             placeholder="Search nodes..."
-            className="w-full pl-10 pr-4 py-2 text-sm rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 bg-slate-100 dark:bg-slate-700 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-slate-200"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
       </div>
-
-      {/* Node Categories */}
-      {activeTab === 'nodes' ? (
-        <div className="flex-1 overflow-y-auto p-2">
-          {Object.entries(nodeCategories).map(([category, { label, icon: Icon, nodes }]) => {
-            const filteredNodes = filterNodes(nodes);
-            if (filteredNodes.length === 0 && searchTerm) return null;
-
-            return (
-              <div key={category} className="mb-2">
-                <button
-                  className="flex items-center w-full p-2 text-left text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md"
-                  onClick={() => toggleCategory(category)}
-                >
-                  {expandedCategories[category] ? (
-                    <ChevronDown size={16} className="mr-2" />
-                  ) : (
-                    <ChevronRight size={16} className="mr-2" />
-                  )}
-                  <Icon size={16} className="mr-2" />
-                  <span className="text-sm font-medium">{label}</span>
-                  <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">
-                    ({filteredNodes.length})
-                  </span>
-                </button>
-
-                {expandedCategories[category] && (
-                  <div className="pl-10 mt-1 space-y-1">
-                    {filteredNodes.map((node) => (
-                      <div
-                        key={node.type}
-                        className="p-2 text-sm text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md cursor-grab"
-                        draggable
-                        onDragStart={(e) => onDragStart(e, node.type, category)}
-                      >
-                        {node.label}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="text-center py-8">
-            <Package size={48} className="mx-auto text-slate-400 mb-4" />
-            <h3 className="text-lg font-medium mb-2">Node Marketplace</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-              Discover and install community-built nodes and integrations
-            </p>
-            <button className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md">
-              Browse Marketplace
-            </button>
+      
+      {/* Tab Navigation */}
+      <div className="flex border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
+        {Object.entries(categories).map(([key, { icon, label }]) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key)}
+            className={`flex items-center space-x-1 px-3 py-2 text-sm ${
+              activeTab === key 
+                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-500' 
+                : 'text-slate-600 dark:text-slate-400'
+            }`}
+          >
+            <span>{icon}</span>
+            <span>{label}</span>
+          </button>
+        ))}
+      </div>
+      
+      {/* Node List */}
+      <div className="flex-1 overflow-y-auto p-2">
+        {filteredNodes.length === 0 ? (
+          <div className="text-center py-10 text-slate-500 dark:text-slate-400">
+            No nodes match your search
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="grid grid-cols-1 gap-2">
+            {filteredNodes.map((node) => (
+              <div
+                key={node.type}
+                className={`p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md cursor-move hover:shadow-md transition-shadow ${
+                  hoveredNode === node.type ? 'ring-2 ring-blue-500 dark:ring-blue-400' : ''
+                }`}
+                draggable
+                onDragStart={(event) => onDragStart(event, node.type, node.category)}
+                onMouseEnter={() => setHoveredNode(node.type)}
+                onMouseLeave={() => setHoveredNode(null)}
+              >
+                <div className="flex items-center space-x-2">
+                  <div className={`p-1.5 rounded-md ${getCategoryColor(node.category)}`}>
+                    {getCategoryIcon(node.category)}
+                  </div>
+                  <div>
+                    <div className="font-medium text-sm dark:text-slate-200">{node.label}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">
+                      {node.description}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
+
+// Helper functions for node styling
+function getCategoryColor(category) {
+  switch (category) {
+    case 'trigger':
+      return 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400';
+    case 'app':
+      return 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400';
+    case 'logic':
+      return 'bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400';
+    case 'data':
+      return 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400';
+    case 'ai':
+      return 'bg-pink-100 dark:bg-pink-900/40 text-pink-600 dark:text-pink-400';
+    default:
+      return 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400';
+  }
+}
+
+function getCategoryIcon(category) {
+  switch (category) {
+    case 'trigger':
+      return <Zap size={16} />;
+    case 'app':
+      return <AppWindow size={16} />; // Changed from Apps to AppWindow
+    case 'logic':
+      return <CircuitBoard size={16} />;
+    case 'data':
+      return <Database size={16} />;
+    case 'ai':
+      return <BrainCircuit size={16} />;
+    default:
+      return <Search size={16} />;
+  }
+}
 
 export default NodeLibrary;

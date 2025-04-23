@@ -24,15 +24,17 @@ const nodeTypes = {
 };
 
 const FlowCanvas = () => {
+  const activeFlow = useFlowStore(state => state.getActiveFlow());
   const { 
-    nodes,
-    edges,
     onNodesChange,
     onEdgesChange,
     onConnect,
     onNodeClick,
     addNode
   } = useFlowStore();
+  
+  const nodes = useFlowStore(state => state.getNodes());
+  const edges = useFlowStore(state => state.getEdges());
   
   const reactFlowWrapper = useRef(null);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);

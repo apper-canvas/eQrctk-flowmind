@@ -1,5 +1,10 @@
 import { create } from 'zustand';
 import { nanoid } from 'nanoid';
+import {
+  applyNodeChanges,
+  applyEdgeChanges,
+  addEdge
+} from 'reactflow';
 
 const defaultNode = {
   id: '1',
@@ -25,6 +30,7 @@ const initialFlow = {
 export const useFlowStore = create((set, get) => ({
   flows: [initialFlow],
   activeFlowId: initialFlow.id,
+  selectedNode: null,
   
   // Flow operations
   setActiveFlow: (flowId) => {
@@ -62,11 +68,29 @@ export const useFlowStore = create((set, get) => ({
     set({ flows: newFlows });
   },
   
+  // Tab operations
+  addTab: () => {
+    const newId = nanoid();
+    const newName = `Flow ${get().flows.length + 1}`;
+    get().createFlow(newId, newName);
+    get().setActiveFlow(newId);
+  },
+  
+  cycleToNextTab: () => {
+    const { flows, activeFlowId } = get();
+    const currentIndex = flows.findIndex(flow => flow.id === activeFlowId);
+    const nextIndex = (currentIndex + 1) % flows.length;
+    set({ activeFlowId: flows[nextIndex].id });
+  },
+  
   // Node & edge operations for active flow
   getActiveFlow: () => {
     const { flows, activeFlowId } = get();
     return flows.find(flow => flow.id === activeFlowId);
   },
+  
+  nodes: [],
+  edges: [],
   
   getNodes: () => {
     const activeFlow = get().getActiveFlow();
@@ -174,74 +198,6 @@ export const useFlowStore = create((set, get) => ({
 
   onNodeClick: (event, node) => {
     console.log('Node clicked:', node);
-    // You can implement node selection or other functionality here
+    set({ selectedNode: node });
   }
 }));
-
-// Helper functions to implement ReactFlow change operations
-function applyNodeChanges(changes, nodes) {
-  return changes.reduce((acc, change) => {
-    switch (change.type) {
-      case 'add':
-        return [...acc, change.item];
-      case 'remove':
-        return acc.filter((node) => node.id !== change.id);
-      case 'position':
-        return acc.map((node) => {
-          if (node.id === change.id) {
-            return {
-              ...node,
-              position: change.position,
-            };
-          }
-          return node;
-        });
-      case 'select':
-        return acc.map((node) => {
-          if (node.id === change.id) {
-            return {
-              ...node,
-              selected: change.selected,
-            };
-          }
-          return node;
-        });
-      default:
-        return acc;
-    }
-  }, nodes);
-}
-
-function applyEdgeChanges(changes, edges) {
-  return changes.reduce((acc, change) => {
-    switch (change.type) {
-      case 'add':
-        return [...acc, change.item];
-      case 'remove':
-        return acc.filter((edge) => edge.id !== change.id);
-      case 'select':
-        return acc.map((edge) => {
-          if (edge.id === change.id) {
-            return {
-              ...edge,
-              selected: change.selected,
-            };
-          }
-          return edge;
-        });
-      default:
-        return acc;
-    }
-  }, edges);
-}
-
-function addEdge(edgeParams, edges) {
-  // Create a new edge with a unique ID if not provided
-  const edge = {
-    ...edgeParams,
-    id: edgeParams.id || `${edgeParams.source}-${edgeParams.target}`
-  };
-  return [...edges, edge];
-}
-
-export default useFlowStore;
