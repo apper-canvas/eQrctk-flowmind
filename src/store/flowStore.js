@@ -1,239 +1,227 @@
 import { create } from 'zustand';
-import { 
-  addEdge, 
-  applyEdgeChanges, 
-  applyNodeChanges,
-  MarkerType
-} from 'reactflow';
 import { nanoid } from 'nanoid';
-import { nodeDefinitions } from '../utils/nodeData';
 
-const initialTabs = [
-  { id: 'tab-1', name: 'Main Workflow', nodes: [], edges: [] }
-];
+const defaultNode = {
+  id: '1',
+  type: 'default',
+  position: { x: 250, y: 100 },
+  data: { label: 'Default Node' }
+};
 
-export const useFlowStore = create((set, get) => ({
-  // Workflow data
-  workflowName: 'Untitled Workflow',
-  workflowDescription: '',
+const defaultEdge = {
+  id: 'e1-2',
+  source: '1',
+  target: '2',
+  animated: true
+};
+
+const initialFlow = {
+  id: nanoid(),
+  name: 'Flow 1',
+  nodes: [defaultNode],
+  edges: []
+};
+
+const useFlowStore = create((set, get) => ({
+  flows: [initialFlow],
+  activeFlowId: initialFlow.id,
   
-  // Tab management
-  tabs: initialTabs,
-  activeTabId: 'tab-1',
-  
-  // Selected elements
-  selectedNode: null,
-  
-  // Current workflow elements (derived from active tab)
-  get nodes() {
-    const activeTab = get().tabs.find(tab => tab.id === get().activeTabId);
-    return activeTab ? activeTab.nodes : [];
+  // Flow operations
+  setActiveFlow: (flowId) => {
+    set({ activeFlowId: flowId });
   },
   
-  get edges() {
-    const activeTab = get().tabs.find(tab => tab.id === get().activeTabId);
-    return activeTab ? activeTab.edges : [];
-  },
-  
-  // Tab actions
-  addTab: () => set(state => {
-    const id = `tab-${nanoid(6)}`;
-    const newTabs = [...state.tabs, { 
-      id, 
-      name: `Workflow ${state.tabs.length + 1}`,
-      nodes: [],
+  createFlow: (id, name = 'New Flow') => {
+    const newFlow = {
+      id,
+      name,
+      nodes: [{ ...defaultNode, id: nanoid() }],
       edges: []
-    }];
-    
-    return { 
-      tabs: newTabs,
-      activeTabId: id
-    };
-  }),
-  
-  activateTab: (tabId) => set({ activeTabId: tabId }),
-  
-  closeTab: (tabId) => set(state => {
-    // Don't close if this is the last tab
-    if (state.tabs.length <= 1) return state;
-    
-    const tabIndex = state.tabs.findIndex(tab => tab.id === tabId);
-    const newTabs = state.tabs.filter(tab => tab.id !== tabId);
-    
-    // If closing the active tab, switch to another one
-    let newActiveTabId = state.activeTabId;
-    if (tabId === state.activeTabId) {
-      // Try to activate the tab to the left, or the first one if no left tab
-      newActiveTabId = newTabs[tabIndex > 0 ? tabIndex - 1 : 0]?.id;
-    }
-    
-    return {
-      tabs: newTabs,
-      activeTabId: newActiveTabId
-    };
-  }),
-  
-  updateTabName: (tabId, newName) => set(state => ({
-    tabs: state.tabs.map(tab => 
-      tab.id === tabId ? { ...tab, name: newName } : tab
-    )
-  })),
-  
-  // New tab management functions
-  reorderTabs: (draggedId, targetId) => set(state => {
-    const draggedIndex = state.tabs.findIndex(tab => tab.id === draggedId);
-    const targetIndex = state.tabs.findIndex(tab => tab.id === targetId);
-    
-    if (draggedIndex === -1 || targetIndex === -1) return state;
-    
-    // Create a new array with the reordered tabs
-    const newTabs = [...state.tabs];
-    const [draggedTab] = newTabs.splice(draggedIndex, 1);
-    newTabs.splice(targetIndex, 0, draggedTab);
-    
-    return { tabs: newTabs };
-  }),
-  
-  cycleToNextTab: () => set(state => {
-    if (state.tabs.length <= 1) return state;
-    
-    const currentIndex = state.tabs.findIndex(tab => tab.id === state.activeTabId);
-    const nextIndex = (currentIndex + 1) % state.tabs.length;
-    
-    return { activeTabId: state.tabs[nextIndex].id };
-  }),
-  
-  // Workflow metadata actions
-  setWorkflowName: (name) => set({ workflowName: name }),
-  setWorkflowDescription: (description) => set({ workflowDescription: description }),
-  
-  // Node actions
-  onNodesChange: (changes) => set(state => {
-    const updatedTabs = state.tabs.map(tab => {
-      if (tab.id === state.activeTabId) {
-        return {
-          ...tab,
-          nodes: applyNodeChanges(changes, tab.nodes)
-        };
-      }
-      return tab;
-    });
-    
-    return { tabs: updatedTabs };
-  }),
-  
-  onEdgesChange: (changes) => set(state => {
-    const updatedTabs = state.tabs.map(tab => {
-      if (tab.id === state.activeTabId) {
-        return {
-          ...tab,
-          edges: applyEdgeChanges(changes, tab.edges)
-        };
-      }
-      return tab;
-    });
-    
-    return { tabs: updatedTabs };
-  }),
-  
-  onConnect: (connection) => set(state => {
-    const newEdge = {
-      ...connection,
-      id: `edge-${nanoid(6)}`,
-      type: 'smoothstep',
-      animated: false,
-      style: { stroke: '#60a5fa' },
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        width: 20,
-        height: 20,
-        color: '#60a5fa',
-      },
     };
     
-    const updatedTabs = state.tabs.map(tab => {
-      if (tab.id === state.activeTabId) {
-        return {
-          ...tab,
-          edges: addEdge(newEdge, tab.edges)
-        };
-      }
-      return tab;
-    });
-    
-    return { tabs: updatedTabs };
-  }),
+    set(state => ({
+      flows: [...state.flows, newFlow]
+    }));
+  },
   
-  // Node selection
-  setSelectedNode: (node) => set({ selectedNode: node }),
+  removeFlow: (flowId) => {
+    set(state => ({
+      flows: state.flows.filter(flow => flow.id !== flowId)
+    }));
+  },
   
-  onNodeClick: (event, node) => set({ selectedNode: node }),
+  updateFlowName: (flowId, name) => {
+    set(state => ({
+      flows: state.flows.map(flow => 
+        flow.id === flowId ? { ...flow, name } : flow
+      )
+    }));
+  },
   
-  // Add node to canvas from library
-  addNode: (type, category, position) => set(state => {
-    const definition = nodeDefinitions.find(def => def.type === type) || {
-      type,
-      label: type.charAt(0).toUpperCase() + type.slice(1),
-      description: 'Custom node',
-      category: category || 'default'
-    };
-    
-    const newNode = {
-      id: `node-${nanoid(6)}`,
-      type,
-      position,
-      data: {
-        label: definition.label,
-        description: definition.description,
-        version: '1.0.0',
-        fields: {},
-      }
-    };
-    
-    const updatedTabs = state.tabs.map(tab => {
-      if (tab.id === state.activeTabId) {
-        return {
-          ...tab,
-          nodes: [...tab.nodes, newNode]
-        };
-      }
-      return tab;
-    });
-    
-    return { 
-      tabs: updatedTabs,
-      selectedNode: newNode
-    };
-  }),
+  updateFlowOrder: (newFlows) => {
+    set({ flows: newFlows });
+  },
   
-  // Update node data (used by Inspector)
-  updateNodeData: (nodeId, newData) => set(state => {
-    const updatedTabs = state.tabs.map(tab => {
-      if (tab.id === state.activeTabId) {
-        return {
-          ...tab,
-          nodes: tab.nodes.map(node => 
-            node.id === nodeId 
-              ? { ...node, data: newData } 
-              : node
-          )
-        };
-      }
-      return tab;
-    });
-    
-    // Also update the selected node if it's the one being modified
-    let updatedSelectedNode = state.selectedNode;
-    if (state.selectedNode && state.selectedNode.id === nodeId) {
-      updatedSelectedNode = {
-        ...state.selectedNode,
-        data: newData
-      };
-    }
-    
-    return { 
-      tabs: updatedTabs,
-      selectedNode: updatedSelectedNode
-    };
-  }),
+  // Node & edge operations for active flow
+  getActiveFlow: () => {
+    const { flows, activeFlowId } = get();
+    return flows.find(flow => flow.id === activeFlowId);
+  },
+  
+  getNodes: () => {
+    const activeFlow = get().getActiveFlow();
+    return activeFlow ? activeFlow.nodes : [];
+  },
+  
+  getEdges: () => {
+    const activeFlow = get().getActiveFlow();
+    return activeFlow ? activeFlow.edges : [];
+  },
+  
+  setNodes: (nodes) => {
+    set(state => ({
+      flows: state.flows.map(flow => 
+        flow.id === state.activeFlowId 
+          ? { ...flow, nodes } 
+          : flow
+      )
+    }));
+  },
+  
+  setEdges: (edges) => {
+    set(state => ({
+      flows: state.flows.map(flow => 
+        flow.id === state.activeFlowId 
+          ? { ...flow, edges } 
+          : flow
+      )
+    }));
+  },
+  
+  onNodesChange: (changes) => {
+    const nodes = get().getNodes();
+    // Apply changes to nodes
+    set(state => ({
+      flows: state.flows.map(flow => 
+        flow.id === state.activeFlowId 
+          ? { 
+              ...flow,
+              nodes: applyNodeChanges(changes, nodes) 
+            } 
+          : flow
+      )
+    }));
+  },
+  
+  onEdgesChange: (changes) => {
+    const edges = get().getEdges();
+    // Apply changes to edges
+    set(state => ({
+      flows: state.flows.map(flow => 
+        flow.id === state.activeFlowId 
+          ? { 
+              ...flow,
+              edges: applyEdgeChanges(changes, edges) 
+            } 
+          : flow
+      )
+    }));
+  },
+  
+  onConnect: (connection) => {
+    const edges = get().getEdges();
+    // Add new connection
+    set(state => ({
+      flows: state.flows.map(flow => 
+        flow.id === state.activeFlowId 
+          ? { 
+              ...flow,
+              edges: addEdge({ ...connection, animated: true }, edges) 
+            } 
+          : flow
+      )
+    }));
+  },
+  
+  addNode: (node) => {
+    const nodes = get().getNodes();
+    set(state => ({
+      flows: state.flows.map(flow => 
+        flow.id === state.activeFlowId 
+          ? { 
+              ...flow, 
+              nodes: [...nodes, { ...node, id: node.id || nanoid() }] 
+            } 
+          : flow
+      )
+    }));
+  }
 }));
+
+// Helper functions to implement ReactFlow change operations
+function applyNodeChanges(changes, nodes) {
+  return changes.reduce((acc, change) => {
+    switch (change.type) {
+      case 'add':
+        return [...acc, change.item];
+      case 'remove':
+        return acc.filter((node) => node.id !== change.id);
+      case 'position':
+        return acc.map((node) => {
+          if (node.id === change.id) {
+            return {
+              ...node,
+              position: change.position,
+            };
+          }
+          return node;
+        });
+      case 'select':
+        return acc.map((node) => {
+          if (node.id === change.id) {
+            return {
+              ...node,
+              selected: change.selected,
+            };
+          }
+          return node;
+        });
+      default:
+        return acc;
+    }
+  }, nodes);
+}
+
+function applyEdgeChanges(changes, edges) {
+  return changes.reduce((acc, change) => {
+    switch (change.type) {
+      case 'add':
+        return [...acc, change.item];
+      case 'remove':
+        return acc.filter((edge) => edge.id !== change.id);
+      case 'select':
+        return acc.map((edge) => {
+          if (edge.id === change.id) {
+            return {
+              ...edge,
+              selected: change.selected,
+            };
+          }
+          return edge;
+        });
+      default:
+        return acc;
+    }
+  }, edges);
+}
+
+function addEdge(edgeParams, edges) {
+  // Create a new edge with a unique ID if not provided
+  const edge = {
+    ...edgeParams,
+    id: edgeParams.id || `${edgeParams.source}-${edgeParams.target}`
+  };
+  return [...edges, edge];
+}
+
+export default useFlowStore;

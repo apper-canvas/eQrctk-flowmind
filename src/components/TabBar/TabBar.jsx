@@ -1,211 +1,191 @@
-import { useState, useEffect, useRef } from 'react';
-import { Plus, X, Edit, Copy, Trash, MoreHorizontal } from 'lucide-react';
-import { useFlowStore } from '../../store/flowStore';
+import React, { useState, useEffect } from 'react';
+import { X, Plus } from 'lucide-react';
+import useFlowStore from '../../store/flowStore';
+import { nanoid } from 'nanoid';
 
 const TabBar = () => {
   const { 
-    tabs, 
-    activeTabId, 
-    addTab, 
-    activateTab, 
-    closeTab,
-    updateTabName,
-    reorderTabs,
-    cycleToNextTab
+    flows, 
+    activeFlowId, 
+    setActiveFlow, 
+    createFlow, 
+    removeFlow,
+    updateFlowOrder
   } = useFlowStore();
   
-  const [editingTabId, setEditingTabId] = useState(null);
-  const [editedName, setEditedName] = useState('');
   const [draggedTabId, setDraggedTabId] = useState(null);
-  const tabRefs = useRef({});
-  
-  // Handle keyboard navigation with Tab key
+  const [dropIndicatorPos, setDropIndicatorPos] = useState(null);
+
+  // Handle keyboard navigation through tabs
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Check for Tab key + specific modifiers
-      if (e.key === 'Tab' && e.altKey) {
+    const handleTabKeypress = (e) => {
+      // Only handle when Tab key is pressed with no modifiers
+      if (e.key === 'Tab' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
         e.preventDefault();
-        cycleToNextTab();
+        
+        // Find current active tab index
+        const currentIndex = flows.findIndex(flow => flow.id === activeFlowId);
+        
+        // Calculate next tab index (cycle through tabs)
+        const nextIndex = (currentIndex + 1) % flows.length;
+        
+        // Set the next tab as active
+        setActiveFlow(flows[nextIndex].id);
       }
     };
     
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cycleToNextTab]);
-  
-  const startEditingTab = (tabId, currentName, e) => {
+    window.addEventListener('keydown', handleTabKeypress);
+    return () => {
+      window.removeEventListener('keydown', handleTabKeypress);
+    };
+  }, [flows, activeFlowId, setActiveFlow]);
+
+  const handleAddTab = () => {
+    const newFlowId = nanoid();
+    createFlow(newFlowId, `Flow ${flows.length + 1}`);
+    setActiveFlow(newFlowId);
+  };
+
+  const handleCloseTab = (e, flowId) => {
     e.stopPropagation();
-    setEditingTabId(tabId);
-    setEditedName(currentName);
-  };
-  
-  const saveTabName = (tabId) => {
-    if (editedName.trim()) {
-      updateTabName(tabId, editedName.trim());
-    }
-    setEditingTabId(null);
-  };
-
-  // Drag and drop functionality
-  const handleDragStart = (e, tabId) => {
-    setDraggedTabId(tabId);
-    e.dataTransfer.setData('application/reactflow-tab', tabId);
-    e.dataTransfer.effectAllowed = 'move';
+    removeFlow(flowId);
     
-    // Set a ghost image for dragging
-    const draggedTab = tabRefs.current[tabId];
-    if (draggedTab) {
-      const rect = draggedTab.getBoundingClientRect();
-      e.dataTransfer.setDragImage(draggedTab, rect.width / 2, rect.height / 2);
+    // If we're closing the active tab, activate another one
+    if (flowId === activeFlowId && flows.length > 1) {
+      const index = flows.findIndex(flow => flow.id === flowId);
+      const newActiveIndex = index === 0 ? 1 : index - 1;
+      setActiveFlow(flows[newActiveIndex].id);
     }
   };
 
-  const handleDragOver = (e, tabId) => {
+  const handleDragStart = (e, flowId, index) => {
+    setDraggedTabId(flowId);
+    e.dataTransfer.effectAllowed = 'move';
+    // Store the tab index to know which tab is being dragged
+    e.dataTransfer.setData('text/plain', index);
+    
+    // Create a ghost image
+    const ghostElem = e.target.cloneNode(true);
+    ghostElem.style.opacity = '0.5';
+    ghostElem.style.position = 'absolute';
+    ghostElem.style.top = '-1000px';
+    document.body.appendChild(ghostElem);
+    e.dataTransfer.setDragImage(ghostElem, 0, 0);
+    
+    // Clean up the ghost element after a delay
+    setTimeout(() => {
+      document.body.removeChild(ghostElem);
+    }, 0);
+  };
+
+  const handleDragOver = (e, index) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     
-    if (draggedTabId && draggedTabId !== tabId) {
-      // Highlight potential drop target
-      const targetTab = tabRefs.current[tabId];
-      if (targetTab) {
-        targetTab.classList.add('bg-blue-100', 'dark:bg-blue-900/30');
+    // Calculate whether to show indicator before or after the tab
+    const tab = e.currentTarget;
+    const tabRect = tab.getBoundingClientRect();
+    const dragX = e.clientX;
+    
+    // Show indicator before or after tab based on mouse position
+    if (dragX < tabRect.left + tabRect.width / 2) {
+      setDropIndicatorPos({ index, position: 'before' });
+    } else {
+      setDropIndicatorPos({ index, position: 'after' });
+    }
+  };
+
+  const handleDragLeave = () => {
+    // Only clear indicator if we're not entering another valid drop target
+    setTimeout(() => {
+      if (!document.querySelector(':hover.tab-item')) {
+        setDropIndicatorPos(null);
       }
-    }
+    }, 50);
   };
 
-  const handleDragLeave = (e, tabId) => {
-    // Remove highlight
-    const targetTab = tabRefs.current[tabId];
-    if (targetTab) {
-      targetTab.classList.remove('bg-blue-100', 'dark:bg-blue-900/30');
-    }
-  };
-
-  const handleDrop = (e, targetTabId) => {
+  const handleDrop = (e, targetIndex) => {
     e.preventDefault();
+    const sourceIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
     
-    // Remove highlight
-    const targetTab = tabRefs.current[targetTabId];
-    if (targetTab) {
-      targetTab.classList.remove('bg-blue-100', 'dark:bg-blue-900/30');
+    if (sourceIndex === targetIndex) {
+      setDropIndicatorPos(null);
+      setDraggedTabId(null);
+      return;
     }
     
-    if (draggedTabId && draggedTabId !== targetTabId) {
-      // Reorder tabs in the store
-      reorderTabs(draggedTabId, targetTabId);
+    // Adjust target index based on drop position
+    let finalTargetIndex = targetIndex;
+    if (dropIndicatorPos?.position === 'after') {
+      finalTargetIndex++;
     }
     
+    // Account for removing the item before inserting it
+    if (sourceIndex < finalTargetIndex) {
+      finalTargetIndex--;
+    }
+    
+    // Reorder the flows
+    const newFlows = [...flows];
+    const [movedFlow] = newFlows.splice(sourceIndex, 1);
+    newFlows.splice(finalTargetIndex, 0, movedFlow);
+    
+    // Update the flow order
+    updateFlowOrder(newFlows);
+    
+    // Reset drag state
+    setDropIndicatorPos(null);
     setDraggedTabId(null);
   };
 
-  const handleDragEnd = (e) => {
-    // Check if dragged outside the tab bar (to a new window)
-    if (e.dataTransfer.dropEffect === 'none') {
-      attemptToOpenInNewWindow(draggedTabId);
-    }
+  const handleDragEnd = () => {
+    setDropIndicatorPos(null);
     setDraggedTabId(null);
-  };
-
-  const attemptToOpenInNewWindow = (tabId) => {
-    const tab = tabs.find(t => t.id === tabId);
-    if (tab) {
-      // In a real implementation, you would:
-      // 1. Serialize the tab data
-      // 2. Open a new window with window.open()
-      // 3. Send the data to that window
-      // 4. Remove the tab from the current window
-      
-      // For this demo, we'll show an alert
-      alert(`Tab "${tab.name}" would open in a new window`);
-      
-      // This would be the actual implementation in a production app:
-      // const tabData = JSON.stringify(tab);
-      // const newWindow = window.open('/workflow', '_blank');
-      // newWindow.addEventListener('load', () => {
-      //   newWindow.postMessage({ type: 'LOAD_TAB', payload: tabData }, '*');
-      // });
-      // closeTab(tabId);
-    }
   };
 
   return (
-    <div className="bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center">
-      <div className="flex-1 overflow-x-auto scrollbar-none flex items-center">
-        {tabs.map((tab) => (
-          <div
-            key={tab.id}
-            ref={el => tabRefs.current[tab.id] = el}
-            className={`
-              flex items-center px-3 py-2 border-r border-slate-200 dark:border-slate-700 cursor-pointer
-              select-none transition-colors duration-150
-              ${activeTabId === tab.id 
-                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100' 
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}
-              ${draggedTabId === tab.id ? 'opacity-50' : 'opacity-100'}
-            `}
-            onClick={() => activateTab(tab.id)}
-            draggable="true"
-            onDragStart={(e) => handleDragStart(e, tab.id)}
-            onDragOver={(e) => handleDragOver(e, tab.id)}
-            onDragLeave={(e) => handleDragLeave(e, tab.id)}
-            onDrop={(e) => handleDrop(e, tab.id)}
-            onDragEnd={handleDragEnd}
-          >
-            {editingTabId === tab.id ? (
-              <input
-                type="text"
-                value={editedName}
-                onChange={(e) => setEditedName(e.target.value)}
-                onBlur={() => saveTabName(tab.id)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') saveTabName(tab.id);
-                  if (e.key === 'Escape') setEditingTabId(null);
-                }}
-                onClick={(e) => e.stopPropagation()}
-                className="px-1 py-0.5 w-32 text-sm bg-white dark:bg-slate-600 border border-blue-500 rounded focus:outline-none"
-                autoFocus
-              />
-            ) : (
-              <span className="mr-2 text-sm truncate max-w-[160px]">{tab.name}</span>
-            )}
-            
-            <div className="flex items-center ml-1">
-              {!editingTabId && (
-                <button
-                  className="p-0.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
-                  onClick={(e) => startEditingTab(tab.id, tab.name, e)}
+    <div className="flex bg-gray-800 border-b border-gray-700 h-10">
+      <div className="flex-1 flex overflow-x-auto">
+        {flows.map((flow, index) => {
+          const isActive = flow.id === activeFlowId;
+          const isDragged = flow.id === draggedTabId;
+          
+          return (
+            <div 
+              key={flow.id}
+              className={`tab-item relative flex items-center px-4 py-2 text-sm cursor-pointer select-none
+                ${isActive ? 'bg-gray-700 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}
+                ${isDragged ? 'opacity-50' : 'opacity-100'}
+                ${dropIndicatorPos?.index === index && dropIndicatorPos?.position === 'before' ? 'border-l-2 border-blue-500' : ''}
+                ${dropIndicatorPos?.index === index && dropIndicatorPos?.position === 'after' ? 'border-r-2 border-blue-500' : ''}
+              `}
+              onClick={() => setActiveFlow(flow.id)}
+              draggable="true"
+              onDragStart={(e) => handleDragStart(e, flow.id, index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, index)}
+              onDragEnd={handleDragEnd}
+            >
+              <span className="truncate max-w-xs">{flow.name}</span>
+              {flows.length > 1 && (
+                <button 
+                  className="ml-2 text-gray-500 hover:text-white focus:outline-none"
+                  onClick={(e) => handleCloseTab(e, flow.id)}
                 >
-                  <Edit size={12} />
+                  <X size={16} />
                 </button>
               )}
-              <button
-                className="p-0.5 ml-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  closeTab(tab.id);
-                }}
-              >
-                <X size={14} />
-              </button>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
-      
-      <div className="flex items-center px-2 border-l border-slate-200 dark:border-slate-700">
-        <button
-          className="p-1.5 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
-          onClick={() => addTab()}
-          title="New Tab (Ctrl+T)"
+      <div className="flex items-center px-2">
+        <button 
+          className="flex items-center justify-center w-6 h-6 text-gray-400 hover:text-white focus:outline-none"
+          onClick={handleAddTab}
         >
           <Plus size={16} />
-        </button>
-        
-        <button
-          className="p-1.5 ml-1 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
-          title="Tab options"
-        >
-          <MoreHorizontal size={16} />
         </button>
       </div>
     </div>
