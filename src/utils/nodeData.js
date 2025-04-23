@@ -1,6 +1,6 @@
 import {
   Zap,
-  Apps,
+  Grip,
   GitBranch,
   Database,
   Bot,
