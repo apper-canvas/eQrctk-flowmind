@@ -1,138 +1,125 @@
+import React from 'react';
 import { 
-  AppWindow, // Changed from non-existent 'Apps' to AppWindow
-  Zap, 
-  CircuitBoard, 
+  Workflow, 
+  MessageSquare, 
+  GitBranch, 
   Database, 
-  BrainCircuit,
-  Slack, 
-  Github, 
-  FileText,
-  Mail,
-  MessageSquare,
-  Globe
+  AppWindow, 
+  Bot, 
+  Clock, 
+  Webhook as WebhookIcon, 
+  FileJson, 
+  Columns, 
+  SplitSquareVertical 
 } from 'lucide-react';
 
-// Node definitions array with all available nodes
+export const nodeCategories = [
+  { id: 'trigger', label: 'Triggers' },
+  { id: 'app', label: 'Apps' },
+  { id: 'logic', label: 'Logic' },
+  { id: 'data', label: 'Data' },
+  { id: 'ai', label: 'AI' },
+];
+
 export const nodeDefinitions = [
   // Triggers
   {
+    type: 'cron',
+    label: 'Cron',
+    category: 'trigger',
+    icon: <Clock size={18} />,
+    description: 'Triggers on a schedule',
+  },
+  {
     type: 'webhook',
     label: 'Webhook',
-    description: 'Receives HTTP requests to trigger workflows',
     category: 'trigger',
-    icon: <Globe size={16} />
-  },
-  {
-    type: 'cron',
-    label: 'Cron Scheduler',
-    description: 'Schedule workflows based on time intervals',
-    category: 'trigger',
-    icon: <Zap size={16} />
-  },
-  {
-    type: 'email-trigger',
-    label: 'Email Trigger',
-    description: 'Trigger workflow when emails are received',
-    category: 'trigger',
-    icon: <Mail size={16} />
+    icon: <WebhookIcon size={18} />,
+    description: 'Triggers when HTTP request is received',
   },
   
   // Apps
   {
-    type: 'webhook',
-    label: 'Webhook',
-    description: 'Create and manage webhooks for external systems',
-    category: 'app',
-    icon: <Globe size={16} />
-  },
-  {
     type: 'slack',
     label: 'Slack',
-    description: 'Send messages and interact with Slack',
     category: 'app',
-    icon: <Slack size={16} />
+    icon: <MessageSquare size={18} />,
+    description: 'Interact with Slack channels and messages',
   },
   {
     type: 'discord',
     label: 'Discord',
-    description: 'Send messages and interact with Discord',
     category: 'app',
-    icon: <MessageSquare size={16} />
+    icon: <MessageSquare size={18} />,
+    description: 'Send and receive Discord messages',
   },
   {
     type: 'github',
     label: 'GitHub',
-    description: 'Interact with GitHub repositories and issues',
     category: 'app',
-    icon: <Github size={16} />
+    icon: <GitBranch size={18} />,
+    description: 'Manage GitHub issues, PRs, and repositories',
+  },
+  {
+    type: 'webhook-app',
+    label: 'Webhook',
+    category: 'app',
+    icon: <WebhookIcon size={18} />,
+    description: 'Send HTTP requests to external services',
   },
   
   // Logic
   {
     type: 'if',
-    label: 'IF Condition',
-    description: 'Branch workflow based on conditions',
+    label: 'IF',
     category: 'logic',
-    icon: <CircuitBoard size={16} />
+    icon: <SplitSquareVertical size={18} />,
+    description: 'Conditional branching based on conditions',
   },
   {
     type: 'switch',
     label: 'Switch',
-    description: 'Multi-branch conditions based on values',
     category: 'logic',
-    icon: <CircuitBoard size={16} />
-  },
-  {
-    type: 'loop',
-    label: 'Loop',
-    description: 'Iterate over arrays or repeat actions',
-    category: 'logic',
-    icon: <CircuitBoard size={16} />
+    icon: <Columns size={18} />,
+    description: 'Route to different paths based on value',
   },
   
   // Data
   {
-    type: 'http-request',
+    type: 'http',
     label: 'HTTP Request',
-    description: 'Make HTTP requests to external APIs',
     category: 'data',
-    icon: <Database size={16} />
+    icon: <AppWindow size={18} />,
+    description: 'Make external API calls',
   },
   {
-    type: 'csv',
-    label: 'CSV Parser',
-    description: 'Parse and process CSV data',
+    type: 'json',
+    label: 'JSON',
     category: 'data',
-    icon: <FileText size={16} />
+    icon: <FileJson size={18} />,
+    description: 'Parse and manipulate JSON data',
   },
   {
-    type: 'data-transform',
-    label: 'Data Transform',
-    description: 'Transform data between different formats',
+    type: 'database',
+    label: 'Database',
     category: 'data',
-    icon: <Database size={16} />
+    icon: <Database size={18} />,
+    description: 'Connect to databases like MySQL or MongoDB',
   },
   
   // AI
   {
-    type: 'llm-call',
+    type: 'llm',
     label: 'LLM Call',
-    description: 'Make calls to language models like GPT-4',
     category: 'ai',
-    icon: <BrainCircuit size={16} />
+    icon: <Bot size={18} />,
+    description: 'Call language models like GPT-4 or Claude',
   },
   {
-    type: 'agent-runner',
+    type: 'agent',
     label: 'Agent Runner',
-    description: 'Run an AI agent with goals and tools',
     category: 'ai',
-    icon: <BrainCircuit size={16} />
+    icon: <Workflow size={18} />,
+    description: 'Run an autonomous AI agent with tools',
   },
-  {
-    type: 'image-gen',
-    label: 'Image Generator',
-    description: 'Generate images using AI models',
-    category: 'ai',
-    icon: <BrainCircuit size={16} />
-  }
 ];
