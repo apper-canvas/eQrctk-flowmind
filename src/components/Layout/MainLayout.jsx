@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import TopBar from '../TopBar/TopBar';
 import NodeLibrary from '../Sidebar/NodeLibrary';
@@ -13,6 +13,21 @@ const MainLayout = () => {
   const [isInspectorOpen, setIsInspectorOpen] = useState(true);
   const [activeRightTab, setActiveRightTab] = useState('inspector'); // 'inspector' or 'logs'
   const selectedNode = useFlowStore(state => state.selectedNode);
+  const { addTab, cycleToNextTab } = useFlowStore();
+
+  useEffect(() => {
+    // Global keyboard handler for tab management hotkeys
+    const handleKeyDown = (e) => {
+      // Ctrl+T for new tab
+      if (e.ctrlKey && e.key === 't') {
+        e.preventDefault();
+        addTab();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [addTab]);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);

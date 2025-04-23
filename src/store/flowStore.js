@@ -79,6 +79,30 @@ export const useFlowStore = create((set, get) => ({
     )
   })),
   
+  // New tab management functions
+  reorderTabs: (draggedId, targetId) => set(state => {
+    const draggedIndex = state.tabs.findIndex(tab => tab.id === draggedId);
+    const targetIndex = state.tabs.findIndex(tab => tab.id === targetId);
+    
+    if (draggedIndex === -1 || targetIndex === -1) return state;
+    
+    // Create a new array with the reordered tabs
+    const newTabs = [...state.tabs];
+    const [draggedTab] = newTabs.splice(draggedIndex, 1);
+    newTabs.splice(targetIndex, 0, draggedTab);
+    
+    return { tabs: newTabs };
+  }),
+  
+  cycleToNextTab: () => set(state => {
+    if (state.tabs.length <= 1) return state;
+    
+    const currentIndex = state.tabs.findIndex(tab => tab.id === state.activeTabId);
+    const nextIndex = (currentIndex + 1) % state.tabs.length;
+    
+    return { activeTabId: state.tabs[nextIndex].id };
+  }),
+  
   // Workflow metadata actions
   setWorkflowName: (name) => set({ workflowName: name }),
   setWorkflowDescription: (description) => set({ workflowDescription: description }),
