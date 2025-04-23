@@ -22,7 +22,7 @@ const initialFlow = {
   edges: []
 };
 
-const useFlowStore = create((set, get) => ({
+export const useFlowStore = create((set, get) => ({
   flows: [initialFlow],
   activeFlowId: initialFlow.id,
   
@@ -143,18 +143,38 @@ const useFlowStore = create((set, get) => ({
     }));
   },
   
-  addNode: (node) => {
+  addNode: (type, category, position) => {
     const nodes = get().getNodes();
+    const nodeId = nanoid();
+    
+    const newNode = {
+      id: nodeId,
+      type: type || 'default',
+      position: position || { x: 250, y: 100 },
+      data: {
+        label: type.charAt(0).toUpperCase() + type.slice(1),
+        category: category || 'default',
+        description: `This is a ${type} node`,
+        version: '1.0',
+        fields: {}
+      }
+    };
+    
     set(state => ({
       flows: state.flows.map(flow => 
         flow.id === state.activeFlowId 
           ? { 
               ...flow, 
-              nodes: [...nodes, { ...node, id: node.id || nanoid() }] 
+              nodes: [...nodes, newNode] 
             } 
           : flow
       )
     }));
+  },
+
+  onNodeClick: (event, node) => {
+    console.log('Node clicked:', node);
+    // You can implement node selection or other functionality here
   }
 }));
 
